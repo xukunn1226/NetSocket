@@ -40,6 +40,7 @@ namespace Framework.NetWork
             m_Client.NoDelay = true;
             // m_Client.ReceiveBufferSize = 8192;
             // m_Client.SendBufferSize = 8192;
+            // 
 
             try
             {
