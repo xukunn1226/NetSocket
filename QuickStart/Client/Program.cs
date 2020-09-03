@@ -10,6 +10,7 @@ namespace Client
     {
         static void Main(string[] args)
         {
+            int i = 0;
         }
     }
 }
