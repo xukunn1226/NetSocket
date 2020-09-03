@@ -26,7 +26,7 @@ namespace Framework.NetWork
 
         public int              Tail    { get { return m_Tail; } }
 
-        public NetStreamBuffer(NetworkStream stream, int capacity = 256 * 1024)
+        public NetStreamBuffer(NetworkStream stream, int capacity = 8 * 1024)
         {
             if (stream == null) throw new ArgumentNullException();
 

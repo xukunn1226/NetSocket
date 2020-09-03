@@ -10,23 +10,23 @@ namespace Framework.NetWork
 {
     public class NetClient
     {
-        public delegate void        OnConnected(NetClient client);
-        public delegate void        OnDisconnected(NetClient client, int ret);
+        public delegate void        onConnected(NetClient client);
+        public delegate void        onDisconnected(NetClient client, int ret);
 
         private TcpClient           m_Client;
 
         private IPAddress           m_IP;
         private int                 m_Port;
 
-        private OnConnected         m_ConnectedHandler;
-        private OnDisconnected      m_DisconnectedHandler;
+        private onConnected         m_ConnectedHandler;
+        private onDisconnected      m_DisconnectedHandler;
 
         private NetStreamBuffer     m_SendBuffer;                                                   // 消息发送缓存池
         private NetStreamBuffer     m_ReceiveBuffer;                                                // 消息接收缓存池
 
         private SemaphoreSlim       m_SendBufferSema = new SemaphoreSlim(0, 1);                     // 控制消息发送的信号量
 
-        public NetClient(string host, int port, OnConnected connectionHandler, OnDisconnected disconnectedHandler)
+        public NetClient(string host, int port, onConnected connectionHandler, onDisconnected disconnectedHandler)
         {
             m_ConnectedHandler = connectionHandler;
             m_DisconnectedHandler = disconnectedHandler;
@@ -51,12 +51,20 @@ namespace Framework.NetWork
             }
             catch(ArgumentNullException e)
             {
-                m_ConnectedHandler?.Invoke(null);
+                m_DisconnectedHandler?.Invoke(null, -1);
                 //Debug.LogError($"Client::Connect {e.Message}");
+            }
+            catch(ArgumentOutOfRangeException e)
+            {
+                m_DisconnectedHandler?.Invoke(null, -2);
+            }
+            catch(ObjectDisposedException e)
+            {
+                m_DisconnectedHandler?.Invoke(null, -3);
             }
             catch(SocketException e)
             {
-                m_ConnectedHandler?.Invoke(null);
+                m_DisconnectedHandler?.Invoke(null, -4);
                 //Debug.LogError($"Client::Connect {e.Message}");
             }
 
@@ -65,6 +73,16 @@ namespace Framework.NetWork
 
             FlushOutputStream();
             ReceiveAsync();
+        }
+
+        private void OnConnected()
+        {
+
+        }
+
+        private void OnDisconnected(int ret)
+        {
+
         }
 
         public void Close()
@@ -136,7 +154,8 @@ namespace Framework.NetWork
         {
             try
             {
-                while(m_Client.Connected)
+                //while(m_Client.Connected)
+                while(true)
                 {
                     int count = await m_ReceiveBuffer.ReadAsync();
                     if(count == 0)
