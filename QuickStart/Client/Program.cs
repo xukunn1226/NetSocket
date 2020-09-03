@@ -11,11 +11,13 @@ namespace Client
     {
         async static Task Main(string[] args)
         {
-            await Task.Run(() => Connect());
+            //await Task.Run(() => Connect());
+            Connect();
 
-            await Task.Delay(10000);
+            await Task.Delay(3000);
 
-            //Console.WriteLine("-----------");
+            Console.WriteLine("-----------");
+            Console.ReadLine();
         }
 
         async static void Connect()
@@ -35,14 +37,17 @@ namespace Client
                 Console.WriteLine(e.ToString());
             }
             // https://stackoverflow.com/questions/41718342/async-socket-client-using-tcpclient-class-c-sharp
-            //await Task.Run(() => Receive());
-            //await Task.Run(() => Write());
+            //Task.Run(() => Receive());
+            //Task.Run(() => Write());
 
-            await Receive();
-            await Write();
+            //await Receive();
+            //await Write();
+
+            Receive();
+            Write();
         }
 
-        async static Task Receive()
+        async static void Receive()
         {
             while (true)
             {
@@ -51,7 +56,7 @@ namespace Client
             }
         }
 
-        async static Task Write()
+        async static void Write()
         {
             while(true)
             {
