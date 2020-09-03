@@ -9,12 +9,12 @@ namespace Client
 {
     class Program
     {
-        async static Task Main(string[] args)
+        static void Main(string[] args)
         {
             //await Task.Run(() => Connect());
             Connect();
 
-            await Task.Delay(3000);
+            //await Task.Delay(3000);
 
             Console.WriteLine("-----------");
             Console.ReadLine();
