@@ -38,8 +38,8 @@ namespace Framework.NetWork
         {
             m_Client = new TcpClient();
             m_Client.NoDelay = true;
-            // m_Client.ReceiveBufferSize = 1024;
-            // m_Client.SendBufferSize = 1024;
+            // m_Client.ReceiveBufferSize = 8192;
+            // m_Client.SendBufferSize = 8192;
 
             try
             {
