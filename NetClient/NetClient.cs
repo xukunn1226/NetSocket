@@ -156,5 +156,55 @@ namespace Framework.NetWork
         {
 
         }
+
+        // https://docs.microsoft.com/zh-cn/dotnet/api/system.net.sockets.socket.connected?redirectedfrom=MSDN&view=netcore-3.1#System_Net_Sockets_Socket_Connected
+        public bool IsConnected(Socket socket)
+        {
+            if (socket == null)
+                throw new ArgumentNullException("socket");
+
+            if (!socket.Connected)      // Connected记录的是最近一次Send或Receive时的状态
+                return false;
+
+            bool isConnected = true;
+            bool blockingState = m_Client.Client.Blocking;
+            try
+            {
+                byte[] tmp = new byte[1];
+
+                m_Client.Client.Blocking = false;
+                m_Client.Client.Send(tmp, 0, 0);
+                Console.WriteLine("Connected!");
+                isConnected = true;
+            }
+            catch (SocketException e)
+            {
+                // 10035 == WSAEWOULDBLOCK
+                if (e.NativeErrorCode.Equals(10035))
+                {
+                    Console.WriteLine("Still Connected, but the Send would block");
+                    isConnected = true;
+                }
+                else
+                {
+                    Console.WriteLine("Disconnected: error code {0}!", e.NativeErrorCode);
+                    isConnected = false;
+                }
+            }
+            finally
+            {
+                m_Client.Client.Blocking = blockingState;
+            }
+            return isConnected;
+        }
+
+        // 适用于对端正常关闭socket下的本地socket状态检测，在非正常关闭如断电、拔网线的情况下不起作用
+        public bool IsConnected2(Socket socket)
+        {
+            if (socket.Poll(10, SelectMode.SelectRead) && (socket.Available == 0) || !socket.Connected)
+                return false;
+            else
+                return true;
+        }
     }
 }
