@@ -68,8 +68,8 @@ namespace Framework.NetWork
                 //Debug.LogError($"Client::Connect {e.Message}");
             }
 
-            m_SendBuffer = new NetStreamBuffer(m_Client.GetStream(), 4 * 1024);
-            m_ReceiveBuffer = new NetStreamBuffer(m_Client.GetStream(), 8 * 1024);
+            m_SendBuffer = new NetStreamBuffer(m_Client, 4 * 1024);
+            m_ReceiveBuffer = new NetStreamBuffer(m_Client, 8 * 1024);
 
             FlushOutputStream();
             ReceiveAsync();
@@ -80,7 +80,7 @@ namespace Framework.NetWork
 
         }
 
-        private void OnDisconnected(int ret)
+        internal void OnDisconnected()
         {
 
         }

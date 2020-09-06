@@ -10,10 +10,11 @@ namespace Framework.NetWork
     /// <summary>
     /// wrapper of NetworkStream, be responsible for sending/receiving of protocol
     /// </summary>
-    public class NetStreamBuffer
+    internal class NetStreamBuffer
     {
         private const int       m_MinCapacity = 1024;
         private NetworkStream   m_Stream;
+        private TcpClient       m_Client;
 
         private byte[]          m_Buffer;
         private int             m_Head;
@@ -26,30 +27,27 @@ namespace Framework.NetWork
 
         public int              Tail    { get { return m_Tail; } }
 
-        public NetStreamBuffer(NetworkStream stream, int capacity = 8 * 1024)
+        public NetStreamBuffer(TcpClient client, int capacity = 8 * 1024)
         {
-            if (stream == null) throw new ArgumentNullException();
+            if (client == null) throw new ArgumentNullException();
 
-            m_Stream = stream;
+            m_Client = client;
+            m_Stream = client.GetStream();
             EnsureCapacity(capacity);
-            // m_Buffer = new byte[Mathf.NextPowerOfTwo(Mathf.Max(m_MinCapacity, capacity))];
-            // m_Head = 0;
-            // m_Tail = 0;
-            // m_IndexMask = m_Buffer.Length - 1;
         }
 
-        public void Clear()
+        private void Clear()
         {
             m_Head = 0;
             m_Tail = 0;
         }
 
-        public bool IsEmpty()
+        internal bool IsEmpty()
         {
             return m_Head == m_Tail;
         }
 
-        public bool IsFull()
+        internal bool IsFull()
         {
             return ((m_Head + 1) & m_IndexMask) == m_Tail;
         }
@@ -95,6 +93,18 @@ namespace Framework.NetWork
             return Write(data, 0, data.Length);
         }
 
+        private int NextPowerOfTwo(int n)
+        {
+            n--;
+            n |= n >> 1;
+            n |= n >> 2;
+            n |= n >> 4;
+            n |= n >> 8;
+            n |= n >> 16;
+            n++;
+            return n;
+        }
+
         private void EnsureCapacity(int min)
         {
             if(m_Buffer.Length < min)
@@ -104,7 +114,7 @@ namespace Framework.NetWork
                     newCapacity = Int32.MaxValue;
                 if(newCapacity < min)
                     newCapacity = min;
-                //newCapacity = Mathf.ClosestPowerOfTwo(newCapacity);
+                newCapacity = NextPowerOfTwo(newCapacity);
 
                 // expand buffer
                 byte[] newBuf = new byte[newCapacity];
@@ -133,7 +143,7 @@ namespace Framework.NetWork
         {
             try
             {
-                if (IsEmpty())
+                if (IsEmpty() || !m_Stream.CanWrite)
                     return;
 
                 int count = GetUsedCapacity();
@@ -150,10 +160,28 @@ namespace Framework.NetWork
 
                 m_Tail = (m_Tail + count) & m_IndexMask;        // 数据发送完成，更新Tail
             }
-            catch(Exception e)
+            catch (ObjectDisposedException e)
             {
-                //Debug.LogError($"NetStreamBuffer.Flush: {e.Message}");
+                // The NetworkStream is closed
             }
+            catch (ArgumentNullException e)
+            {
+                Console.WriteLine("The buffer parameter is NULL");
+            }
+            catch(ArgumentOutOfRangeException e)
+            {
+                Console.WriteLine(e.Message);
+            }
+            catch(InvalidOperationException e)
+            {
+                //Console.WriteLine("The NetworkStream does not support writing");
+                Console.WriteLine(e.Message);
+            }
+            catch(IOException e)
+            {
+                //Console.WriteLine("There was a failure while writing to the network");
+                Console.WriteLine(e.Message);
+            }            
         }
 
         /// <summary>
@@ -165,7 +193,9 @@ namespace Framework.NetWork
             try
             {
                 if (IsFull())
-                    return 0;
+                {
+                    EnsureCapacity(m_IndexMask + 1);
+                }
 
                 int maxCount = m_Buffer.Length - 1 - m_Head;
                 if (m_Tail > m_Head)
@@ -175,9 +205,19 @@ namespace Framework.NetWork
                 m_Head = (m_Head + count) & m_IndexMask;
                 return count;
             }
-            catch(Exception e)
+            catch (ObjectDisposedException e)
             {
-                //Debug.LogError($"ReadAsync: {e.Message}");
+                // The NetworkStream is closed
+                return 0;
+            }
+            catch (InvalidOperationException e)
+            {
+                Console.WriteLine("The NetworkStream does not support reading");
+                return 0;
+            }
+            catch(IOException e)
+            {
+                Console.WriteLine(e.Message);
                 return 0;
             }
         }
