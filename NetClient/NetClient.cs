@@ -13,6 +13,14 @@ namespace Framework.NetWork
         public delegate void        onConnected(NetClient client);
         public delegate void        onDisconnected(NetClient client, int ret);
 
+        enum ConnectState
+        {
+            Disconnected,
+            Connecting,
+            Connected,
+        }
+        private ConnectState        m_State = ConnectState.Disconnected;
+
         private TcpClient           m_Client;
 
         private IPAddress           m_IP;
@@ -45,6 +53,7 @@ namespace Framework.NetWork
             {
                 m_IP = IPAddress.Parse(host);
                 m_Port = port;
+                m_State = ConnectState.Connecting;
                 await m_Client.ConnectAsync(m_IP, m_Port);
 
                 OnConnected();
@@ -72,8 +81,8 @@ namespace Framework.NetWork
                 OnDisconnected(-4);
             }
 
-            m_SendBuffer = new NetStreamBuffer(m_Client, 4 * 1024);
-            m_ReceiveBuffer = new NetStreamBuffer(m_Client, 8 * 1024);
+            m_SendBuffer = new NetStreamBuffer(this, 4 * 1024);
+            m_ReceiveBuffer = new NetStreamBuffer(this, 8 * 1024);
 
             FlushOutputStream();
             ReceiveAsync();
@@ -81,11 +90,13 @@ namespace Framework.NetWork
 
         private void OnConnected()
         {
+            m_State = ConnectState.Connected;
             m_ConnectedHandler?.Invoke(this);
         }
 
         internal void OnDisconnected(int ret)
         {
+            m_State = ConnectState.Disconnected;
             m_DisconnectedHandler?.Invoke(null, ret);
         }
 
@@ -104,7 +115,7 @@ namespace Framework.NetWork
             }
         }
 
-        private void LateUpdate()
+        public void Tick()
         {
             // 一帧触发一次消息发送
             if (m_SendBufferSema.CurrentCount == 0 && !m_SendBuffer.IsEmpty())             // The number of remaining threads that can enter the semaphore

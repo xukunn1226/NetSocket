@@ -14,12 +14,14 @@ namespace Framework.NetWork
     {
         private const int       m_MinCapacity = 1024;
         private NetworkStream   m_Stream;
-        private TcpClient       m_Client;
+        private TcpClient       m_TcpClient;
+        private NetClient       m_NetClient;
 
         private byte[]          m_Buffer;
         private int             m_Head;
         private int             m_Tail;
         private int             m_IndexMask;
+        private int             m_BuffCount;
 
         public byte[]           Buffer  { get { return m_Buffer; } }
 
@@ -27,12 +29,13 @@ namespace Framework.NetWork
 
         public int              Tail    { get { return m_Tail; } }
 
-        public NetStreamBuffer(TcpClient client, int capacity = 8 * 1024)
+        public NetStreamBuffer(NetClient netClient, TcpClient tcpClient, int capacity = 8 * 1024)
         {
-            if (client == null) throw new ArgumentNullException();
+            if (netClient == null) throw new ArgumentNullException();
 
-            m_Client = client;
-            m_Stream = client.GetStream();
+            m_NetClient = netClient;
+            m_TcpClient = tcpClient;
+            m_Stream = tcpClient.GetStream();
             EnsureCapacity(capacity);
         }
 
@@ -59,7 +62,7 @@ namespace Framework.NetWork
 
         private int GetUsedCapacity()
         {
-            return m_Head >= m_Tail ? m_Head - m_Tail : m_Buffer.Length - 1 - (m_Tail - m_Head);
+            return m_Head >= m_Tail ? m_Head - m_Tail : m_Buffer.Length - (m_Tail - m_Head);
         }
 
         public bool Write(byte[] data, int offset, int length)
@@ -131,7 +134,8 @@ namespace Framework.NetWork
                 m_Buffer = newBuf;
                 m_Tail = 0;
                 m_Head = length;
-                m_IndexMask = m_Buffer.Length - 1;
+                m_BuffCount = m_Buffer.Length;
+                m_IndexMask = m_BuffCount - 1;
             }
         }
 
@@ -163,44 +167,49 @@ namespace Framework.NetWork
             catch (ObjectDisposedException e)
             {
                 // The NetworkStream is closed
+                m_NetClient.OnDisconnected(-1);
             }
             catch (ArgumentNullException e)
             {
                 Console.WriteLine("The buffer parameter is NULL");
+                m_NetClient.OnDisconnected(-1);
             }
             catch(ArgumentOutOfRangeException e)
             {
                 Console.WriteLine(e.Message);
+                m_NetClient.OnDisconnected(-1);
             }
             catch(InvalidOperationException e)
             {
                 //Console.WriteLine("The NetworkStream does not support writing");
                 Console.WriteLine(e.Message);
+                m_NetClient.OnDisconnected(-1);
             }
             catch(IOException e)
             {
                 //Console.WriteLine("There was a failure while writing to the network");
                 Console.WriteLine(e.Message);
-            }            
+                m_NetClient.OnDisconnected(-1);
+            }
         }
 
         /// <summary>
-        /// 异步接收消息数据，不负责粘包处理
+        /// 异步接收消息数据
         /// </summary>
         /// <returns>返回接收到的字节数</returns>
         public async Task<int> ReadAsync()
         {
             try
             {
-                if (IsFull())
+                if (IsFull() && m_Stream.CanWrite)
                 {
                     EnsureCapacity(m_IndexMask + 1);
                 }
 
                 int maxCount = m_Buffer.Length - 1 - m_Head;
                 if (m_Tail > m_Head)
-                    maxCount = Math.Min(maxCount, m_Tail - m_Head);
-                
+                    maxCount = Math.Min(maxCount, m_Tail - m_Head - 1);
+
                 int count = await m_Stream.ReadAsync(m_Buffer, m_Head, maxCount);
                 m_Head = (m_Head + count) & m_IndexMask;
                 return count;
