@@ -47,25 +47,29 @@ namespace Framework.NetWork
                 m_Port = port;
                 await m_Client.ConnectAsync(m_IP, m_Port);
 
-                m_ConnectedHandler?.Invoke(this);
+                OnConnected();
             }
             catch(ArgumentNullException e)
             {
-                m_DisconnectedHandler?.Invoke(null, -1);
+                //m_DisconnectedHandler?.Invoke(null, -1);
                 //Debug.LogError($"Client::Connect {e.Message}");
+                OnDisconnected(-1);
             }
             catch(ArgumentOutOfRangeException e)
             {
-                m_DisconnectedHandler?.Invoke(null, -2);
+                //m_DisconnectedHandler?.Invoke(null, -2);
+                OnDisconnected(-2);
             }
             catch(ObjectDisposedException e)
             {
-                m_DisconnectedHandler?.Invoke(null, -3);
+                //m_DisconnectedHandler?.Invoke(null, -3);
+                OnDisconnected(-3);
             }
             catch(SocketException e)
             {
-                m_DisconnectedHandler?.Invoke(null, -4);
+                //m_DisconnectedHandler?.Invoke(null, -4);
                 //Debug.LogError($"Client::Connect {e.Message}");
+                OnDisconnected(-4);
             }
 
             m_SendBuffer = new NetStreamBuffer(m_Client, 4 * 1024);
@@ -77,12 +81,12 @@ namespace Framework.NetWork
 
         private void OnConnected()
         {
-
+            m_ConnectedHandler?.Invoke(this);
         }
 
-        internal void OnDisconnected()
+        internal void OnDisconnected(int ret)
         {
-
+            m_DisconnectedHandler?.Invoke(null, ret);
         }
 
         public void Close()
@@ -92,7 +96,7 @@ namespace Framework.NetWork
                 m_Client.GetStream().Close();
                 m_Client.Close();
 
-                m_DisconnectedHandler?.Invoke(this, 0);
+                OnDisconnected(0);
             }
             catch(Exception e)
             {
