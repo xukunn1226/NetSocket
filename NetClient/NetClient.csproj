@@ -42,6 +42,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="NetClient.cs" />
+    <Compile Include="NetManager.cs" />
     <Compile Include="NetStreamBuffer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

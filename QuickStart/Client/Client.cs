@@ -4,21 +4,53 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Net.Sockets;
+using Framework.NetWork;
 
 namespace Client
 {
-    class Program
+    class Client
     {
+        static private NetClient m_NetClient;
+
         static void Main(string[] args)
         {
+            ////////////// example 1.
             //await Task.Run(() => Connect());
-            Connect();
+            //Connect();
 
             //await Task.Delay(3000);
 
-            Console.WriteLine("-----------");
+
+            ///////////// example 2.
+            Console.WriteLine("Press 'F1' to connect server...");
+            ConsoleKeyInfo key = Console.ReadKey();
+            if (key.Key == ConsoleKey.F1)
+            {
+                m_NetClient = new NetClient("192.168.6.91", 11000);
+                Console.WriteLine("\ncreate net client successfully");
+            }
+            else
+            {
+                return;
+            }
+
+            Console.WriteLine("\nPress 'Enter' to send data");
+            string data = Console.ReadLine();
+            key = Console.ReadKey();
+            if(key.Key == ConsoleKey.Enter)
+            {
+                byte[] byteData = Encoding.ASCII.GetBytes(data);
+                m_NetClient.Send(byteData, 0, 10);
+                m_NetClient.Tick();
+            }
+
+
+
+
             Console.ReadLine();
         }
+
+
 
         async static void Connect()
         {
@@ -30,6 +62,10 @@ namespace Client
             {
                 await client.ConnectAsync(host, port);
                 Console.WriteLine("Connect successful");
+
+                Write();
+                Receive();
+                int ii = 0;
             }
             catch (SocketException e)
             {
@@ -43,8 +79,7 @@ namespace Client
             //await Receive();
             //await Write();
 
-            Receive();
-            Write();
+            
         }
 
         async static void Receive()
@@ -60,9 +95,16 @@ namespace Client
         {
             while(true)
             {
-                await Task.Delay(500);
+                //await Task.Delay(500);
+                await Foo();
                 Console.WriteLine("Write");
             }
+        }
+
+        async static Task Foo()
+        {
+            await Task.Delay(1);
+            return;
         }
     }
 }

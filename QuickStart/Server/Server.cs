@@ -52,7 +52,7 @@ namespace Framework.NetWork
             try
             {
                 Socket client = m_Socket.EndAccept(ar);
-                //Debug.Log($"client {client.RemoteEndPoint} connected...");
+                Console.WriteLine($"client {client.RemoteEndPoint} connected...");
 
                 UserToken token = m_Pools.Pop();
                 token.m_Socket = client;
@@ -66,6 +66,7 @@ namespace Framework.NetWork
             catch(Exception e)
             {
                 //Debug.Log(e);
+                Console.WriteLine(e.Message);
             }
         }
 

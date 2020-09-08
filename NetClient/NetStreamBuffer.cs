@@ -12,16 +12,14 @@ namespace Framework.NetWork
     /// </summary>
     internal class NetStreamBuffer
     {
-        private const int       m_MinCapacity = 1024;
+        private const int       m_DefaultCapacity = 1024;
         private NetworkStream   m_Stream;
-        private TcpClient       m_TcpClient;
         private NetClient       m_NetClient;
 
         private byte[]          m_Buffer;
         private int             m_Head;
         private int             m_Tail;
         private int             m_IndexMask;
-        private int             m_BuffCount;
 
         public byte[]           Buffer  { get { return m_Buffer; } }
 
@@ -31,10 +29,9 @@ namespace Framework.NetWork
 
         public NetStreamBuffer(NetClient netClient, TcpClient tcpClient, int capacity = 8 * 1024)
         {
-            if (netClient == null) throw new ArgumentNullException();
+            if (netClient == null || tcpClient == null) throw new ArgumentNullException();
 
             m_NetClient = netClient;
-            m_TcpClient = tcpClient;
             m_Stream = tcpClient.GetStream();
             EnsureCapacity(capacity);
         }
@@ -55,9 +52,14 @@ namespace Framework.NetWork
             return ((m_Head + 1) & m_IndexMask) == m_Tail;
         }
 
+        private int GetMaxCapacity()
+        {
+            return m_Buffer.Length - 1;
+        }
+
         private int GetFreeCapacity()
         {
-            return m_Buffer.Length - 1 - GetUsedCapacity();
+            return GetMaxCapacity() - GetUsedCapacity();
         }
 
         private int GetUsedCapacity()
@@ -71,16 +73,22 @@ namespace Framework.NetWork
                 throw new ArgumentNullException("data == null");
 
             // 传入参数的合法性检查:可写入空间大小的检查
-            if (offset + length > data.Length || length > GetFreeCapacity())
-                throw new ArgumentOutOfRangeException();
+            if (offset + length > data.Length)
+                throw new ArgumentOutOfRangeException("offset + length > data.Length");
 
-            if(m_Head + length <= m_Buffer.Length - 1)              // buffer最后一个字节留空
+            // expand buffer
+            while(length > GetFreeCapacity())
+            {
+                EnsureCapacity(GetMaxCapacity() + 1);
+            }
+
+            if(m_Head + length <= m_Buffer.Length)
             {
                 System.Buffer.BlockCopy(data, offset, m_Buffer, m_Head, length);
             }
             else
             {
-                int countToEnd = m_Buffer.Length - 1 - m_Head;      // 到buffer末尾的剩余空间，最后一个字节留空
+                int countToEnd = m_Buffer.Length - m_Head;
                 System.Buffer.BlockCopy(data, offset, m_Buffer, m_Head, countToEnd);
                 System.Buffer.BlockCopy(data, countToEnd, m_Buffer, 0, length - countToEnd);
             }
@@ -91,8 +99,6 @@ namespace Framework.NetWork
 
         public bool Write(byte[] data)
         {
-            if (data == null)
-                throw new ArgumentNullException("data == null");
             return Write(data, 0, data.Length);
         }
 
@@ -110,9 +116,9 @@ namespace Framework.NetWork
 
         private void EnsureCapacity(int min)
         {
-            if(m_Buffer.Length < min)
+            if(m_Buffer == null || m_Buffer.Length < min)
             {
-                int newCapacity = m_Buffer.Length == 0 ? m_MinCapacity : m_Buffer.Length * 2;
+                int newCapacity = m_Buffer == null || m_Buffer.Length == 0 ? m_DefaultCapacity : m_Buffer.Length * 2;
                 if((uint)newCapacity > Int32.MaxValue)
                     newCapacity = Int32.MaxValue;
                 if(newCapacity < min)
@@ -121,21 +127,25 @@ namespace Framework.NetWork
 
                 // expand buffer
                 byte[] newBuf = new byte[newCapacity];
-                int length = GetUsedCapacity();
                 if(m_Head > m_Tail)
                 {
-                    System.Buffer.BlockCopy(m_Buffer, 0, newBuf, 0, m_Head - m_Tail);
+                    System.Buffer.BlockCopy(m_Buffer, m_Tail, newBuf, m_Tail, m_Head - m_Tail);
+                    //m_Tail = m_Tail;      // no change
+                    //m_Head = m_Head;      // no change
                 }
                 else if(m_Head < m_Tail)
                 {
-                    System.Buffer.BlockCopy(m_Buffer, m_Tail, newBuf, 0, m_Buffer.Length - 1 - m_Tail);
-                    System.Buffer.BlockCopy(m_Buffer, 0, newBuf, m_Buffer.Length - 1 - m_Tail, m_Head);
+                    int countToEnd = m_Buffer.Length - m_Tail;
+                    System.Buffer.BlockCopy(m_Buffer, m_Tail, newBuf, newBuf.Length - countToEnd, countToEnd);
+
+                    if(m_Head > 0)
+                        System.Buffer.BlockCopy(m_Buffer, 0, newBuf, 0, m_Head);
+
+                    m_Tail = newBuf.Length - countToEnd;
+                    //m_Head = m_Head;      // no change
                 }
                 m_Buffer = newBuf;
-                m_Tail = 0;
-                m_Head = length;
-                m_BuffCount = m_Buffer.Length;
-                m_IndexMask = m_BuffCount - 1;
+                m_IndexMask = m_Buffer.Length - 1;
             }
         }
 
@@ -157,7 +167,7 @@ namespace Framework.NetWork
                 }
                 else
                 {
-                    await m_Stream.WriteAsync(m_Buffer, m_Tail, m_Buffer.Length -1 - m_Tail);
+                    await m_Stream.WriteAsync(m_Buffer, m_Tail, m_Buffer.Length - m_Tail);
                     if(m_Head > 0)
                         await m_Stream.WriteAsync(m_Buffer, 0, m_Head);
                 }
@@ -201,22 +211,27 @@ namespace Framework.NetWork
         {
             try
             {
-                if (IsFull() && m_Stream.CanWrite)
+                if (!m_Stream.CanRead)
                 {
-                    EnsureCapacity(m_IndexMask + 1);
+                    Console.WriteLine("ReadAsync: Can't read");
+                    return 0;
                 }
 
-                int maxCount = m_Buffer.Length - 1 - m_Head;
-                if (m_Tail > m_Head)
-                    maxCount = Math.Min(maxCount, m_Tail - m_Head - 1);
+                if (IsFull())
+                {
+                    EnsureCapacity(m_Buffer.Length + 1);
+                }
 
+                int maxCount = GetFreeCapacity();                               // 最大填充容量
+                maxCount = Math.Min(maxCount, m_Buffer.Length - m_Head);        // 一次最多填充至尾端
+                
                 int count = await m_Stream.ReadAsync(m_Buffer, m_Head, maxCount);
                 m_Head = (m_Head + count) & m_IndexMask;
                 return count;
             }
             catch (ObjectDisposedException e)
             {
-                // The NetworkStream is closed
+                Console.WriteLine("The NetworkStream is closed");
                 return 0;
             }
             catch (InvalidOperationException e)
