@@ -26,7 +26,7 @@ namespace Client
             ConsoleKeyInfo key = Console.ReadKey();
             if (key.Key == ConsoleKey.F1)
             {
-                m_NetClient = new NetClient("192.168.6.91", 11000);
+                m_NetClient = new NetClient("127.0.0.1", 11000);
                 Console.WriteLine("\ncreate net client successfully");
             }
             else

@@ -41,6 +41,9 @@ namespace Framework.NetWork
             m_ConnectedHandler = connectionHandler;
             m_DisconnectedHandler = disconnectedHandler;
 
+            m_SendBuffer = new NetStreamBuffer(this, 4 * 1024);
+            m_ReceiveBuffer = new NetStreamBuffer(this, 8 * 1024);
+
             Connect(host, port);
         }
 
@@ -60,8 +63,8 @@ namespace Framework.NetWork
                 await m_Client.ConnectAsync(m_IP, m_Port);
                 m_State = ConnectState.Connected;
 
-                m_SendBuffer = new NetStreamBuffer(this, m_Client, 4 * 1024);
-                m_ReceiveBuffer = new NetStreamBuffer(this, m_Client, 8 * 1024);
+                m_SendBuffer.SetStream(m_Client.GetStream());
+                m_ReceiveBuffer.SetStream(m_Client.GetStream());
 
                 FlushOutputStream();
                 ReceiveAsync();
@@ -197,9 +200,13 @@ namespace Framework.NetWork
                 while(m_State == ConnectState.Connected)
                 {
                     int count = await m_ReceiveBuffer.ReadAsync();
-                    if(count == 0)
+                    if(count <= 0)
                     {
                         m_DisconnectedHandler?.Invoke(2);     // 远端主动断开网络
+                    }
+                    else
+                    {
+
                     }
                 }
             }

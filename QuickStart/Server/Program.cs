@@ -36,7 +36,7 @@ public class AsynchronousSocketListener
         // running the listener is "host.contoso.com".  
         string hostName = Dns.GetHostName();
         IPHostEntry ipHostInfo = Dns.GetHostEntry(hostName);
-        IPAddress ipAddress = ipHostInfo.AddressList[1];
+        IPAddress ipAddress = ipHostInfo.AddressList[0];
         IPEndPoint localEndPoint = new IPEndPoint(ipAddress, 11000);
         //IPEndPoint localEndPoint = new IPEndPoint(IPAddress.Parse("192.168.6.91"), 12000);
 

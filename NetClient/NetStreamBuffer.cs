@@ -27,13 +27,18 @@ namespace Framework.NetWork
 
         public int              Tail    { get { return m_Tail; } }
 
-        public NetStreamBuffer(NetClient netClient, TcpClient tcpClient, int capacity = 8 * 1024)
+        public NetStreamBuffer(NetClient netClient, int capacity = 8 * 1024)
         {
-            if (netClient == null || tcpClient == null) throw new ArgumentNullException();
+            if (netClient == null) throw new ArgumentNullException();
 
             m_NetClient = netClient;
-            m_Stream = tcpClient.GetStream();
             EnsureCapacity(capacity);
+        }
+
+        public void SetStream(NetworkStream stream)
+        {
+            m_Stream = stream;
+            Clear();
         }
 
         private void Clear()
