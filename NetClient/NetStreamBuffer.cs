@@ -181,12 +181,12 @@ namespace Framework.NetWork
             }
             catch (ObjectDisposedException e)
             {
-                // The NetworkStream is closed
+                Console.WriteLine(e.Message);       // The NetworkStream is closed
                 m_NetClient.OnDisconnected(-1);
             }
             catch (ArgumentNullException e)
             {
-                Console.WriteLine("The buffer parameter is NULL");
+                Console.WriteLine(e.Message);       // The buffer parameter is NULL
                 m_NetClient.OnDisconnected(-1);
             }
             catch(ArgumentOutOfRangeException e)
@@ -196,14 +196,12 @@ namespace Framework.NetWork
             }
             catch(InvalidOperationException e)
             {
-                //Console.WriteLine("The NetworkStream does not support writing");
-                Console.WriteLine(e.Message);
+                Console.WriteLine(e.Message);       // The NetworkStream does not support writing
                 m_NetClient.OnDisconnected(-1);
             }
             catch(IOException e)
             {
-                //Console.WriteLine("There was a failure while writing to the network");
-                Console.WriteLine(e.Message);
+                Console.WriteLine(e.Message);       // There was a failure while writing to the network
                 m_NetClient.OnDisconnected(-1);
             }
         }
@@ -236,12 +234,12 @@ namespace Framework.NetWork
             }
             catch (ObjectDisposedException e)
             {
-                Console.WriteLine("The NetworkStream is closed");
+                Console.WriteLine(e.ToString());          // The NetworkStream is closed
                 return 0;
             }
             catch (InvalidOperationException e)
             {
-                Console.WriteLine("The NetworkStream does not support reading");
+                Console.WriteLine(e.ToString());          // The NetworkStream does not support reading
                 return 0;
             }
             catch(IOException e)

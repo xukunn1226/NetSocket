@@ -34,13 +34,13 @@ namespace Client
                 return;
             }
 
-            Console.WriteLine("\nPress 'Enter' to send data");
+            Console.WriteLine("\nPress 'Enter' to send data\n");
             string data = Console.ReadLine();
             key = Console.ReadKey();
             if(key.Key == ConsoleKey.Enter)
             {
                 byte[] byteData = Encoding.ASCII.GetBytes(data);
-                m_NetClient.Send(byteData, 0, 10);
+                m_NetClient.Send(byteData);
                 m_NetClient.Tick();
             }
 

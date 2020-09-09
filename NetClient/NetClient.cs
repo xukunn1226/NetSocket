@@ -73,26 +73,24 @@ namespace Framework.NetWork
             }
             catch(ArgumentNullException e)
             {
-                //m_DisconnectedHandler?.Invoke(null, -1);
-                //Debug.LogError($"Client::Connect {e.Message}");
+                Console.WriteLine(e.ToString());
                 OnDisconnected(-1);
             }
             catch(ArgumentOutOfRangeException e)
             {
-                //m_DisconnectedHandler?.Invoke(null, -2);
+                Console.WriteLine(e.ToString());
                 OnDisconnected(-2);
             }
             catch(ObjectDisposedException e)
             {
-                //m_DisconnectedHandler?.Invoke(null, -3);
+                Console.WriteLine(e.ToString());
                 OnDisconnected(-3);
             }
             catch(SocketException e)
             {
-                //m_DisconnectedHandler?.Invoke(null, -4);
                 //Debug.LogError($"Client::Connect {e.Message}");
-                OnDisconnected(-4);
                 Console.WriteLine(e.ToString());
+                OnDisconnected(-4);
             }
         }
 
@@ -104,12 +102,22 @@ namespace Framework.NetWork
         private void OnConnected()
         {
             m_ConnectedHandler?.Invoke();
+            Console.Write("Connect server successfully.\n");
         }
 
         internal void OnDisconnected(int ret)
         {
             m_State = ConnectState.Disconnected;
             m_DisconnectedHandler?.Invoke(ret);
+
+            if(ret == 0)
+            {
+                Console.WriteLine("正常断开连接");
+            }
+            else
+            {
+                Console.WriteLine("异常断开连接");
+            }
         }
 
         public void Close()
@@ -123,7 +131,7 @@ namespace Framework.NetWork
             }
             catch(Exception e)
             {
-                //Debug.LogError($"Client::Close {e.Message}");
+                Console.WriteLine(e.ToString());
             }
         }
 
@@ -145,8 +153,6 @@ namespace Framework.NetWork
         {
             try
             {
-                //while(m_Client.Connected)
-                //while (true)
                 while(m_State == ConnectState.Connected)
                 {
                     await m_SendBufferSema.WaitAsync();         // CurrentCount==0将等待，直到Sema.CurrentCount > 0，执行完Sema.CurrentCount -= 1
@@ -155,29 +161,26 @@ namespace Framework.NetWork
             }
             catch(SocketException e)
             {
-                //Debug.LogError($"FlushOutputStream  {e.Message}");
-                m_DisconnectedHandler?.Invoke(e.ErrorCode);         // 异常断开
+                Console.WriteLine(e.ToString());
+                OnDisconnected(-1);
             }
         }
 
         public void Send(byte[] buf, int offset, int length)
         {
-            //if (buf == null || offset + length > buf.Length)
-            //{
-            //    throw new ArgumentException("Send: offset + length > buf.Length");
-            //}
-
             try
             {
                 m_SendBuffer.Write(buf, offset, length);
             }
             catch(ArgumentNullException e)
             {
-                Close();
+                Console.WriteLine(e.ToString());
+                OnDisconnected(-1);
             }
             catch(ArgumentOutOfRangeException e)
             {
-                Close();
+                Console.WriteLine(e.ToString());
+                OnDisconnected(-1);
             }
         }
 
@@ -195,14 +198,12 @@ namespace Framework.NetWork
         {
             try
             {
-                //while(m_Client.Connected)
-                //while(true)
                 while(m_State == ConnectState.Connected)
                 {
                     int count = await m_ReceiveBuffer.ReadAsync();
                     if(count <= 0)
                     {
-                        m_DisconnectedHandler?.Invoke(2);     // 远端主动断开网络
+                        OnDisconnected(0);              // 远端主动断开网络
                     }
                     else
                     {
@@ -212,8 +213,8 @@ namespace Framework.NetWork
             }
             catch(SocketException e)
             {
-                //Debug.LogError($"ReceiveAsync   {e.Message}");
-                m_DisconnectedHandler?.Invoke(e.ErrorCode);
+                Console.WriteLine(e.ToString());
+                OnDisconnected(-1);
             }
         }
 
