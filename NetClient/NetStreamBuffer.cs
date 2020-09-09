@@ -258,9 +258,11 @@ namespace Framework.NetWork
             m_Tail = (m_Tail + length) & m_IndexMask;
         }
 
-        public void FetchBuffer(byte[] data)
+        public void FetchBuffer(ref byte[] data, out int offset, out int length)
         {
-
+            data = m_Buffer;
+            offset = m_Tail;
+            length = GetUsedCapacity();
         }
     }
 }
