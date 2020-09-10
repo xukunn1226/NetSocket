@@ -36,6 +36,9 @@ namespace Framework.NetWork
         private SemaphoreSlim       m_SendBufferSema;                                               // 控制消息发送的信号量
                                                                                                     // The count is decremented each time a thread enters the semaphore, and incremented each time a thread releases the semaphore
 
+        private SemaphoreSlim       m_ReceiveBufferSema;
+        private int                 m_ReceiveByte;
+
         public NetClient(string host, int port, onConnected connectionHandler = null, onDisconnected disconnectedHandler = null)
         {
             m_ConnectedHandler = connectionHandler;
@@ -53,6 +56,7 @@ namespace Framework.NetWork
             m_Client.NoDelay = true;
 
             m_SendBufferSema = new SemaphoreSlim(0, 1);
+            m_ReceiveBufferSema = new SemaphoreSlim(0, 1);
 
             try
             {
@@ -146,7 +150,21 @@ namespace Framework.NetWork
             }
 
             // 解析消息
-            ParseMsg();
+            //if(m_ReceiveBufferSema != null &&
+            //   m_ReceiveBufferSema.CurrentCount == 0 &&
+            //   m_ReceiveByte > 0)
+            if(m_State == ConnectState.Connected)
+            {
+                byte[] buf = null;
+                int offset;
+                int length;
+                m_ReceiveBuffer.FetchBuffer(ref buf, out offset, out length);
+
+                int len = ParseMsg(buf, offset, length);
+                m_ReceiveBuffer.FinishRead(len);
+
+                //m_ReceiveBufferSema.Release();
+            }
         }
 
         private async void FlushOutputStream()
@@ -189,26 +207,21 @@ namespace Framework.NetWork
             Send(buf, 0, buf.Length);
         }
 
-
-
-
-
-
         private async void ReceiveAsync()
         {
             try
             {
                 while(m_State == ConnectState.Connected)
                 {
-                    int count = await m_ReceiveBuffer.ReadAsync();
-                    if(count <= 0)
+                    m_ReceiveByte = await m_ReceiveBuffer.ReadAsync();
+                    if(m_ReceiveByte <= 0)
                     {
                         OnDisconnected(0);              // 远端主动断开网络
                     }
-                    else
-                    {
-
-                    }
+                    //else
+                    //{
+                    //    await m_ReceiveBufferSema.WaitAsync();      // CurrentCount==0将等待，直到Sema.CurrentCount > 0，执行完Sema.CurrentCount -= 1
+                    //}
                 }
             }
             catch(SocketException e)
@@ -218,9 +231,10 @@ namespace Framework.NetWork
             }
         }
 
-        private void ParseMsg()
+        // 解析协议
+        private int ParseMsg(byte[] buf, int offset, int length)
         {
-
+            return length;
         }
 
         // https://docs.microsoft.com/zh-cn/dotnet/api/system.net.sockets.socket.connected?redirectedfrom=MSDN&view=netcore-3.1#System_Net_Sockets_Socket_Connected
