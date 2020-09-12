@@ -84,7 +84,7 @@ namespace Framework.NetWork
             // expand buffer
             while(length > GetFreeCapacity())
             {
-                EnsureCapacity(GetMaxCapacity() + 1);
+                EnsureCapacity(m_Buffer.Length + 1);
             }
 
             if(m_Head + length <= m_Buffer.Length)
@@ -225,8 +225,7 @@ namespace Framework.NetWork
                     EnsureCapacity(m_Buffer.Length + 1);
                 }
 
-                int maxCount = GetFreeCapacity();                               // 最大填充容量
-                maxCount = Math.Min(maxCount, m_Buffer.Length - m_Head);        // 一次最多填充至尾端
+                int maxCount = Math.Min(GetFreeCapacity(), m_Buffer.Length - m_Head);        // 一次最多填充至尾端
                 
                 int count = await m_Stream.ReadAsync(m_Buffer, m_Head, maxCount);
                 m_Head = (m_Head + count) & m_IndexMask;
