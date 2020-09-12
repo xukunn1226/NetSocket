@@ -37,7 +37,6 @@ namespace Framework.NetWork
                                                                                                     // The count is decremented each time a thread enters the semaphore, and incremented each time a thread releases the semaphore
         private bool                m_isSendingBuffer;                                              // 发送消息IO是否进行中
 
-        private SemaphoreSlim       m_ReceiveBufferSema;
         private int                 m_ReceiveByte;
 
         public NetClient(string host, int port, onConnected connectionHandler = null, onDisconnected disconnectedHandler = null)
@@ -58,7 +57,6 @@ namespace Framework.NetWork
             m_Client.NoDelay = true;
 
             m_SendBufferSema = new SemaphoreSlim(0, 1);
-            m_ReceiveBufferSema = new SemaphoreSlim(0, 1);
             m_isSendingBuffer = false;
 
             try
@@ -71,7 +69,7 @@ namespace Framework.NetWork
                 m_SendBuffer.SetStream(m_Client.GetStream());
                 m_ReceiveBuffer.SetStream(m_Client.GetStream());
 
-                FlushOutputStream();
+                WriteAsync();
                 ReceiveAsync();
             }
             catch(ArgumentNullException e)
@@ -91,7 +89,6 @@ namespace Framework.NetWork
             }
             catch(SocketException e)
             {
-                //Debug.LogError($"Client::Connect {e.Message}");
                 Console.WriteLine(e.ToString());
                 OnDisconnected(-4);
             }
@@ -106,22 +103,12 @@ namespace Framework.NetWork
         {
             m_State = ConnectState.Connected;
             m_ConnectedHandler?.Invoke();
-            //Console.Write("Connect server successfully.\n");
         }
 
         internal void OnDisconnected(int ret)
         {
             m_State = ConnectState.Disconnected;
             m_DisconnectedHandler?.Invoke(ret);
-
-            //if(ret == 0)
-            //{
-            //    Console.WriteLine("正常断开连接");
-            //}
-            //else
-            //{
-            //    Console.WriteLine("异常断开连接");
-            //}
         }
 
         public void Close()
@@ -139,15 +126,7 @@ namespace Framework.NetWork
             }
         }
 
-        public void Tick()
-        {
-            // 一帧触发一次消息发送
-            ConditionalSendData();
-
-            ConditionalReceiveData();
-        }
-
-        private void ConditionalSendData()
+        public void FlushSending()
         {
             if (m_State == ConnectState.Connected && 
                 m_SendBufferSema != null &&
@@ -159,7 +138,7 @@ namespace Framework.NetWork
             }
         }
 
-        private async void FlushOutputStream()
+        private async void WriteAsync()
         {
             try
             {
@@ -202,23 +181,28 @@ namespace Framework.NetWork
         }
 
 
-        private void ConditionalReceiveData()
+        //private void ConditionalReceiveData()
+        //{
+        //    if (m_State == ConnectState.Connected)
+        //    {
+        //        int offset;
+        //        int length;
+        //        ref readonly byte[] buf = ref m_ReceiveBuffer.Fetch(out offset, out length);
+
+        //        //int len = ParseMsg(buf, offset, length);
+        //        //m_ReceiveBuffer.FinishRead(len);
+        //    }
+        //}
+
+        public ref readonly byte[] BeginRead(out int offset, out int length)
         {
-            //if(m_ReceiveBufferSema != null &&
-            //   m_ReceiveBufferSema.CurrentCount == 0 &&
-            //   m_ReceiveByte > 0)
-            if (m_State == ConnectState.Connected)
-            {
-                byte[] buf = null;
-                int offset;
-                int length;
-                m_ReceiveBuffer.FetchBuffer(ref buf, out offset, out length);
+            ref readonly byte[] data = ref m_ReceiveBuffer.Fetch(out offset, out length);
+            return ref data;
+        }
 
-                int len = ParseMsg(buf, offset, length);
-                m_ReceiveBuffer.FinishRead(len);
-
-                //m_ReceiveBufferSema.Release();
-            }
+        public void EndRead(int length)
+        {
+            m_ReceiveBuffer.FinishRead(length);
         }
 
         private async void ReceiveAsync()
@@ -232,10 +216,6 @@ namespace Framework.NetWork
                     {
                         OnDisconnected(0);              // 远端主动断开网络
                     }
-                    //else
-                    //{
-                    //    await m_ReceiveBufferSema.WaitAsync();      // CurrentCount==0将等待，直到Sema.CurrentCount > 0，执行完Sema.CurrentCount -= 1
-                    //}
                 }
             }
             catch(SocketException e)
@@ -243,12 +223,6 @@ namespace Framework.NetWork
                 Console.WriteLine(e.ToString());
                 OnDisconnected(-1);
             }
-        }
-
-        // 解析协议
-        private int ParseMsg(byte[] buf, int offset, int length)
-        {
-            return length;
         }
 
         // https://docs.microsoft.com/zh-cn/dotnet/api/system.net.sockets.socket.connected?redirectedfrom=MSDN&view=netcore-3.1#System_Net_Sockets_Socket_Connected

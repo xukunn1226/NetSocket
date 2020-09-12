@@ -25,4 +25,15 @@ namespace Framework.NetWork
 
         }
     }
+
+    interface IMessageSerializer
+    {
+        ref readonly byte[] BeginRead(out int offset, out int length);
+        void EndRead(int length);
+    }
+
+    interface IMessageDeserializer
+    {
+        int Deserializer(byte[] data, int offset, int length);
+    }
 }

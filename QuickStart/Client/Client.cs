@@ -74,7 +74,7 @@ namespace Client
                 byte[] byteData = Encoding.ASCII.GetBytes(data);
                 Console.WriteLine("\n" + data);
                 m_NetClient.Send(byteData);
-                m_NetClient.Tick();
+                m_NetClient.FlushSending();
 
                 //if (index == 3)
                 //    break;
@@ -93,7 +93,7 @@ namespace Client
                 {
                     byte[] byteData = Encoding.ASCII.GetBytes(data);
                     m_NetClient.Send(byteData);
-                    m_NetClient.Tick();
+                    m_NetClient.FlushSending();
                 }
                 else if (key.Key == ConsoleKey.Q)
                     break;

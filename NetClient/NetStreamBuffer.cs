@@ -72,7 +72,7 @@ namespace Framework.NetWork
             return m_Head >= m_Tail ? m_Head - m_Tail : m_Buffer.Length - (m_Tail - m_Head);
         }
 
-        public bool Write(byte[] data, int offset, int length)
+        internal bool Write(byte[] data, int offset, int length)
         {
             if (data == null)
                 throw new ArgumentNullException("data == null");
@@ -82,12 +82,12 @@ namespace Framework.NetWork
                 throw new ArgumentOutOfRangeException("offset + length > data.Length");
 
             // expand buffer
-            while(length > GetFreeCapacity())
+            while (length > GetFreeCapacity())
             {
                 EnsureCapacity(m_Buffer.Length + 1);
             }
 
-            if(m_Head + length <= m_Buffer.Length)
+            if (m_Head + length <= m_Buffer.Length)
             {
                 System.Buffer.BlockCopy(data, offset, m_Buffer, m_Head, length);
             }
@@ -102,7 +102,7 @@ namespace Framework.NetWork
             return true;
         }
 
-        public bool Write(byte[] data)
+        internal bool Write(byte[] data)
         {
             return Write(data, 0, data.Length);
         }
@@ -121,29 +121,29 @@ namespace Framework.NetWork
 
         private void EnsureCapacity(int min)
         {
-            if(m_Buffer == null || m_Buffer.Length < min)
+            if (m_Buffer == null || m_Buffer.Length < min)
             {
                 int newCapacity = m_Buffer == null || m_Buffer.Length == 0 ? m_DefaultCapacity : m_Buffer.Length * 2;
-                if((uint)newCapacity > Int32.MaxValue)
+                if ((uint)newCapacity > Int32.MaxValue)
                     newCapacity = Int32.MaxValue;
-                if(newCapacity < min)
+                if (newCapacity < min)
                     newCapacity = min;
                 newCapacity = NextPowerOfTwo(newCapacity);
 
                 // expand buffer
                 byte[] newBuf = new byte[newCapacity];
-                if(m_Head > m_Tail)
+                if (m_Head > m_Tail)
                 {
                     System.Buffer.BlockCopy(m_Buffer, m_Tail, newBuf, m_Tail, m_Head - m_Tail);
                     //m_Tail = m_Tail;      // no change
                     //m_Head = m_Head;      // no change
                 }
-                else if(m_Head < m_Tail)
+                else if (m_Head < m_Tail)
                 {
                     int countToEnd = m_Buffer.Length - m_Tail;
                     System.Buffer.BlockCopy(m_Buffer, m_Tail, newBuf, newBuf.Length - countToEnd, countToEnd);
 
-                    if(m_Head > 0)
+                    if (m_Head > 0)
                         System.Buffer.BlockCopy(m_Buffer, 0, newBuf, 0, m_Head);
 
                     m_Tail = newBuf.Length - countToEnd;
@@ -158,7 +158,7 @@ namespace Framework.NetWork
         /// 异步发送Buff所有数据，由上层决定什么时候发送（最佳实践：一帧调用一次）
         /// </summary>
         /// <returns></returns>
-        public async Task FlushWrite()
+        internal async Task FlushWrite()
         {
             try
             {
@@ -173,7 +173,7 @@ namespace Framework.NetWork
                 else
                 {
                     await m_Stream.WriteAsync(m_Buffer, m_Tail, m_Buffer.Length - m_Tail);
-                    if(m_Head > 0)
+                    if (m_Head > 0)
                         await m_Stream.WriteAsync(m_Buffer, 0, m_Head);
                 }
 
@@ -189,17 +189,17 @@ namespace Framework.NetWork
                 Console.WriteLine(e.Message);       // The buffer parameter is NULL
                 m_NetClient.OnDisconnected(-1);
             }
-            catch(ArgumentOutOfRangeException e)
+            catch (ArgumentOutOfRangeException e)
             {
                 Console.WriteLine(e.Message);
                 m_NetClient.OnDisconnected(-1);
             }
-            catch(InvalidOperationException e)
+            catch (InvalidOperationException e)
             {
                 Console.WriteLine(e.Message);       // The NetworkStream does not support writing
                 m_NetClient.OnDisconnected(-1);
             }
-            catch(IOException e)
+            catch (IOException e)
             {
                 Console.WriteLine(e.Message);       // There was a failure while writing to the network
                 m_NetClient.OnDisconnected(-1);
@@ -210,7 +210,7 @@ namespace Framework.NetWork
         /// 异步接收消息数据
         /// </summary>
         /// <returns>返回接收到的字节数</returns>
-        public async Task<int> ReadAsync()
+        internal async Task<int> ReadAsync()
         {
             try
             {
@@ -226,7 +226,7 @@ namespace Framework.NetWork
                 }
 
                 int maxCount = Math.Min(GetFreeCapacity(), m_Buffer.Length - m_Head);        // 一次最多填充至尾端
-                
+
                 int count = await m_Stream.ReadAsync(m_Buffer, m_Head, maxCount);
                 m_Head = (m_Head + count) & m_IndexMask;
                 return count;
@@ -241,27 +241,23 @@ namespace Framework.NetWork
                 Console.WriteLine(e.ToString());          // The NetworkStream does not support reading
                 return 0;
             }
-            catch(IOException e)
+            catch (IOException e)
             {
                 Console.WriteLine(e.Message);
                 return 0;
             }
         }
-
-        /// <summary>
-        /// 上层解析完消息后需要调用此接口
-        /// </summary>
-        /// <param name="length"></param>
-        public void FinishRead(int length)
+        
+        internal ref readonly byte[] Fetch(out int offset, out int length)
         {
-            m_Tail = (m_Tail + length) & m_IndexMask;
-        }
-
-        public void FetchBuffer(ref byte[] data, out int offset, out int length)
-        {
-            data = m_Buffer;
             offset = m_Tail;
             length = GetUsedCapacity();
+            return ref m_Buffer;
         }
+
+        internal void FinishRead(int length)
+        {
+            m_Tail = (m_Tail + length) & m_IndexMask;
+        }        
     }
 }
