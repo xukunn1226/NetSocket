@@ -149,7 +149,8 @@ namespace Framework.NetWork
 
         private void ConditionalSendData()
         {
-            if (m_SendBufferSema != null &&
+            if (m_State == ConnectState.Connected && 
+                m_SendBufferSema != null &&
                 m_SendBufferSema.CurrentCount == 0 &&           // The number of remaining threads that can enter the semaphore
                 !m_isSendingBuffer &&                           // 上次消息已发送完成
                 !m_SendBuffer.IsEmpty())                        // 已缓存一定的待发送消息
