@@ -10,7 +10,7 @@ namespace Client
 {
     class Client
     {
-        static private NetClient m_NetClient;
+        static private NetManager m_NetManager;
 
         static async Task Main(string[] args)
         {
@@ -23,17 +23,17 @@ namespace Client
 
             ///////////// example 2.
             Console.WriteLine("Press 'F1' to connect server...");
-            m_NetClient = new NetClient("127.0.0.1", 11000, OnConnected, OnDisconnected);
+            m_NetManager = new NetManager();
             ConsoleKeyInfo key;
-            while (m_NetClient.state != NetClient.ConnectState.Connected)
+            while (m_NetManager.state != ConnectState.Connected)
             {
-                if(m_NetClient.state == NetClient.ConnectState.Disconnected)
+                if(m_NetManager.state == ConnectState.Disconnected)
                 {
                     key = Console.ReadKey();
                     if (key.Key == ConsoleKey.F1)
                     {
-                        await m_NetClient.Connect();
-                        if (m_NetClient.state == NetClient.ConnectState.Connected)
+                        await m_NetManager.Connect("127.0.0.1", 11000);
+                        if (m_NetManager.state == ConnectState.Connected)
                             break;
                         else
                             Console.WriteLine("Press 'F1' to retry connect server...");
@@ -46,7 +46,8 @@ namespace Client
             }
 
             // connect successfully
-            await AutoSending();
+            //await AutoSending();
+            ManualSending();
 
             Console.WriteLine("Press any key to quit");
             Console.ReadKey();
@@ -71,10 +72,9 @@ namespace Client
             while (true)
             {
                 string data = "Hello world..." + index++;
-                byte[] byteData = Encoding.ASCII.GetBytes(data);
+                //byte[] byteData = Encoding.ASCII.GetBytes(data);
                 Console.WriteLine("\n" + data);
-                m_NetClient.Send(byteData);
-                m_NetClient.FlushSending();
+                m_NetManager.SetData(data);
 
                 //if (index == 3)
                 //    break;
@@ -91,9 +91,8 @@ namespace Client
                 ConsoleKeyInfo key = Console.ReadKey();
                 if (key.Key == ConsoleKey.Enter)
                 {
-                    byte[] byteData = Encoding.ASCII.GetBytes(data);
-                    m_NetClient.Send(byteData);
-                    m_NetClient.FlushSending();
+                    //byte[] byteData = Encoding.ASCII.GetBytes(data);
+                    m_NetManager.SetData(data);
                 }
                 else if (key.Key == ConsoleKey.Q)
                     break;

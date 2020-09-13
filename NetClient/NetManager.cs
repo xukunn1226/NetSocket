@@ -6,23 +6,59 @@ using System.Threading.Tasks;
 
 namespace Framework.NetWork
 {
-    class NetManager
+    public class NetManager
     {
         private NetClient m_NetClient;
 
-        public void Init(string host, int port)
+        async public Task Connect(string host, int port)
         {
             m_NetClient = new NetClient(host, port, OnConnected, OnDisconnected);
+            await m_NetClient.Connect();
         }
+
+        async public Task Reconnect()
+        {
+            if (m_NetClient == null)
+                throw new ArgumentNullException();
+            await m_NetClient.Reconnect();
+        }
+
+        public void Close()
+        {
+            if (m_NetClient == null)
+                throw new ArgumentNullException();
+            m_NetClient.Close();
+        }
+
+        public ConnectState state { get { return m_NetClient?.state ?? ConnectState.Disconnected; } }
 
         private void OnConnected()
         {
-
+            Console.WriteLine("Connected...");
         }
 
         private void OnDisconnected(int ret)
         {
+            Console.WriteLine("...Disconnected");
+        }
 
+        public void SetData(string context)
+        {
+            byte[] byteData = Encoding.ASCII.GetBytes(context);
+            m_NetClient.Send(byteData);
+            m_NetClient.FlushSending();
+        }
+
+        public string ReceiveData()
+        {
+            int offset;
+            int length;
+            ref readonly byte[] data = ref m_NetClient.BeginRead(out offset, out length);
+            if (length == 0)
+                return string.Empty;
+            string context = Encoding.ASCII.GetString(data);
+            m_NetClient.EndRead(length);
+            return context;
         }
     }
 
@@ -35,5 +71,11 @@ namespace Framework.NetWork
     interface IMessageDeserializer
     {
         int Deserializer(byte[] data, int offset, int length);
+    }
+
+    interface IMessageString : IMessageSerializer, IMessageDeserializer
+    {
+        void Write(string context);
+        string Read();
     }
 }

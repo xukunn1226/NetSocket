@@ -21,11 +21,11 @@ namespace Framework.NetWork
         private int             m_Tail;
         private int             m_IndexMask;
 
-        public byte[]           Buffer  { get { return m_Buffer; } }
+        //public byte[]           Buffer  { get { return m_Buffer; } }
 
-        public int              Head    { get { return m_Head; } }
+        //public int              Head    { get { return m_Head; } }
 
-        public int              Tail    { get { return m_Tail; } }
+        //public int              Tail    { get { return m_Tail; } }
 
         public NetStreamBuffer(NetClient netClient, int capacity = 8 * 1024)
         {

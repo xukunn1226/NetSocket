@@ -8,17 +8,19 @@ using System.Threading;
 
 namespace Framework.NetWork
 {
+    public enum ConnectState
+    {
+        Disconnected,
+        Connecting,
+        Connected,
+    }
+
     public class NetClient
     {
         public delegate void        onConnected();
         public delegate void        onDisconnected(int ret);
 
-        public enum ConnectState
-        {
-            Disconnected,
-            Connecting,
-            Connected,
-        }
+        
         private ConnectState        m_State = ConnectState.Disconnected;
         public ConnectState         state { get { return m_State; } }
 
@@ -94,7 +96,7 @@ namespace Framework.NetWork
             }
         }
 
-        async public void Reconnect()
+        async public Task Reconnect()
         {
             await Connect();
         }
@@ -107,6 +109,10 @@ namespace Framework.NetWork
 
         internal void OnDisconnected(int ret)
         {
+            // release semaphore, then WriteAsync jump out of the while loop
+            if(m_SendBufferSema.CurrentCount == 0)
+                m_SendBufferSema.Release();
+
             m_State = ConnectState.Disconnected;
             m_DisconnectedHandler?.Invoke(ret);
         }
@@ -180,24 +186,9 @@ namespace Framework.NetWork
             Send(buf, 0, buf.Length);
         }
 
-
-        //private void ConditionalReceiveData()
-        //{
-        //    if (m_State == ConnectState.Connected)
-        //    {
-        //        int offset;
-        //        int length;
-        //        ref readonly byte[] buf = ref m_ReceiveBuffer.Fetch(out offset, out length);
-
-        //        //int len = ParseMsg(buf, offset, length);
-        //        //m_ReceiveBuffer.FinishRead(len);
-        //    }
-        //}
-
         public ref readonly byte[] BeginRead(out int offset, out int length)
         {
-            ref readonly byte[] data = ref m_ReceiveBuffer.Fetch(out offset, out length);
-            return ref data;
+            return ref m_ReceiveBuffer.Fetch(out offset, out length);
         }
 
         public void EndRead(int length)
