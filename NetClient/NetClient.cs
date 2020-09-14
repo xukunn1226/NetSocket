@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using System.Net.Sockets;
 using System.Net;
 using System.Threading;
+using Framework.NetWork.Log;
 
 namespace Framework.NetWork
 {
@@ -128,7 +129,7 @@ namespace Framework.NetWork
             }
             catch(Exception e)
             {
-                Console.WriteLine(e.ToString());
+                Trace.Debug(e.ToString());
             }
         }
 
@@ -158,7 +159,7 @@ namespace Framework.NetWork
             }
             catch(SocketException e)
             {
-                Console.WriteLine(e.ToString());
+                Trace.Debug(e.ToString());
                 OnDisconnected(-1);
             }
         }
@@ -171,12 +172,12 @@ namespace Framework.NetWork
             }
             catch(ArgumentNullException e)
             {
-                Console.WriteLine(e.ToString());
+                Trace.Debug(e.ToString());
                 OnDisconnected(-1);
             }
             catch(ArgumentOutOfRangeException e)
             {
-                Console.WriteLine(e.ToString());
+                Trace.Debug(e.ToString());
                 OnDisconnected(-1);
             }
         }
@@ -211,7 +212,7 @@ namespace Framework.NetWork
             }
             catch(SocketException e)
             {
-                Console.WriteLine(e.ToString());
+                Trace.Debug(e.ToString());
                 OnDisconnected(-1);
             }
         }
@@ -233,7 +234,7 @@ namespace Framework.NetWork
 
                 m_Client.Client.Blocking = false;
                 m_Client.Client.Send(tmp, 0, 0);
-                Console.WriteLine("Connected!");
+                Trace.Debug("Connected!");
                 isConnected = true;
             }
             catch (SocketException e)
@@ -241,12 +242,12 @@ namespace Framework.NetWork
                 // 10035 == WSAEWOULDBLOCK
                 if (e.NativeErrorCode.Equals(10035))
                 {
-                    Console.WriteLine("Still Connected, but the Send would block");
+                    Trace.Debug("Still Connected, but the Send would block");
                     isConnected = true;
                 }
                 else
                 {
-                    Console.WriteLine("Disconnected: error code {0}!", e.NativeErrorCode);
+                    Trace.Debug($"Disconnected: error code {e.NativeErrorCode}!");
                     isConnected = false;
                 }
             }
