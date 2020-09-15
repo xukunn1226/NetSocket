@@ -8,7 +8,7 @@ namespace Framework.NetWork
 {
     public interface IProtocol<T> where T : class
     {
-        T Deserialize(ref byte[] data, int offset, int length, out int realLength);
+        T Deserialize(in byte[] data, int offset, int length, out int realLength);
         byte[] Serialize(T msg);
     }
 }

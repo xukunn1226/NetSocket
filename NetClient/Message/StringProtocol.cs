@@ -8,15 +8,15 @@ namespace Framework.NetWork
 {
     public class StringProtocol : IProtocol<string>
     {
-        public string Deserialize(ref byte[] data, int offset, int length, out int realLength)
+        public string Deserialize(in byte[] data, int offset, int length, out int realLength)
         {
             realLength = length;
-            return null;
+            return Encoding.ASCII.GetString(data, offset, length);
         }
 
         public byte[] Serialize(string msg)
         {
-            return null;
+            return Encoding.ASCII.GetBytes(msg);
         }
     }
 }

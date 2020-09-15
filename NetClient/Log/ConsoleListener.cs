@@ -13,7 +13,7 @@ namespace Framework.NetWork.Log
         /// <param name="message"></param>
         public void Debug(string message)
         {
-#if UNITY_EDITOR
+#if UNITY_EDITOR || UNITY_ANDROID || UNITY_IOS
             Debug.Log(string.Concat("Debug: ", message, Environment.NewLine));
 #else
             Console.WriteLine(string.Concat("Debug: ", message, Environment.NewLine));

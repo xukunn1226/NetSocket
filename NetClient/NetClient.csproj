@@ -45,8 +45,8 @@
     <Compile Include="Log\DiagnosticListener.cs" />
     <Compile Include="Log\ITraceListener.cs" />
     <Compile Include="Log\Trace.cs" />
-    <Compile Include="Message\CommandLineMessage.cs" />
-    <Compile Include="Message\IMessage.cs" />
+    <Compile Include="Message\IProtocol.cs" />
+    <Compile Include="Message\StringProtocol.cs" />
     <Compile Include="NetClient.cs" />
     <Compile Include="NetManager.cs" />
     <Compile Include="NetStreamBuffer.cs" />

@@ -5,13 +5,15 @@ using Framework.NetWork.Log;
 
 namespace Framework.NetWork
 {
-    public class NetManager<TMessage> where TMessage : class, IMessage
+    public class NetManager<TMessage> where TMessage : class
     {
-        private NetClient m_NetClient;
+        private NetClient           m_NetClient;
+        private IProtocol<TMessage> m_Parser;
 
-        public NetManager()
+        public NetManager(IProtocol<TMessage> parser)
         {
             Trace.EnableConsole();
+            m_Parser = parser;
         }
 
         async public Task Connect(string host, int port)
@@ -50,43 +52,30 @@ namespace Framework.NetWork
         {
             if (m_NetClient == null)
                 return;
+
             m_NetClient.FlushSending();
         }
 
-        public void SetData(string context)
+        public void SetData(TMessage data, bool needFlush = false)
         {
-            byte[] byteData = Encoding.ASCII.GetBytes(context);
-            m_NetClient.Send(byteData);
-            m_NetClient.FlushSending();
+            byte[] buf = m_Parser.Serialize(data);
+            m_NetClient.Send(buf);
+            if(needFlush)
+                m_NetClient.FlushSending();
         }
 
-        public string ReceiveData()
+        public TMessage ReceiveData()
         {
             int offset;
             int length;
             ref readonly byte[] data = ref m_NetClient.BeginRead(out offset, out length);
             if (length == 0)
-                return string.Empty;
-            string context = Encoding.ASCII.GetString(data);
-            m_NetClient.EndRead(length);
-            return context;
+                return default(TMessage);
+
+            int realLength;
+            TMessage msg = m_Parser.Deserialize(in data, offset, length, out realLength);
+            m_NetClient.EndRead(realLength);
+            return msg;
         }
-    }
-
-    interface IMessageSerializer
-    {
-        ref readonly byte[] BeginRead(out int offset, out int length);
-        void EndRead(int length);
-    }
-
-    interface IMessageDeserializer
-    {
-        int Deserializer(byte[] data, int offset, int length);
-    }
-
-    interface IMessageString : IMessageSerializer, IMessageDeserializer
-    {
-        void Write(string context);
-        string Read();
     }
 }

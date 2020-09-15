@@ -5,27 +5,12 @@ VisualStudioVersion = 16.0.29519.87
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Client", "QuickStart\Client\Client.csproj", "{87285F87-57DD-48E7-A2C2-FF1D1BC3455D}"
 	ProjectSection(ProjectDependencies) = postProject
-		{37973C41-28ED-4256-9D93-4CA613FB129A} = {37973C41-28ED-4256-9D93-4CA613FB129A}
 		{E886D47D-2D36-44AF-8235-207B2A5810B8} = {E886D47D-2D36-44AF-8235-207B2A5810B8}
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Server", "QuickStart\Server\Server.csproj", "{0680A236-E10C-4100-B934-14A39CBB2065}"
-	ProjectSection(ProjectDependencies) = postProject
-		{37973C41-28ED-4256-9D93-4CA613FB129A} = {37973C41-28ED-4256-9D93-4CA613FB129A}
-		{93FE88A5-A157-41A7-AE7D-64FE9DA6A461} = {93FE88A5-A157-41A7-AE7D-64FE9DA6A461}
-	EndProjectSection
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SocketBase", "SocketBase\SocketBase.csproj", "{37973C41-28ED-4256-9D93-4CA613FB129A}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NetClient", "NetClient\NetClient.csproj", "{E886D47D-2D36-44AF-8235-207B2A5810B8}"
-	ProjectSection(ProjectDependencies) = postProject
-		{37973C41-28ED-4256-9D93-4CA613FB129A} = {37973C41-28ED-4256-9D93-4CA613FB129A}
-	EndProjectSection
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NetServer", "NetServer\NetServer.csproj", "{93FE88A5-A157-41A7-AE7D-64FE9DA6A461}"
-	ProjectSection(ProjectDependencies) = postProject
-		{37973C41-28ED-4256-9D93-4CA613FB129A} = {37973C41-28ED-4256-9D93-4CA613FB129A}
-	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -41,18 +26,10 @@ Global
 		{0680A236-E10C-4100-B934-14A39CBB2065}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0680A236-E10C-4100-B934-14A39CBB2065}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0680A236-E10C-4100-B934-14A39CBB2065}.Release|Any CPU.Build.0 = Release|Any CPU
-		{37973C41-28ED-4256-9D93-4CA613FB129A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{37973C41-28ED-4256-9D93-4CA613FB129A}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{37973C41-28ED-4256-9D93-4CA613FB129A}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{37973C41-28ED-4256-9D93-4CA613FB129A}.Release|Any CPU.Build.0 = Release|Any CPU
 		{E886D47D-2D36-44AF-8235-207B2A5810B8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{E886D47D-2D36-44AF-8235-207B2A5810B8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E886D47D-2D36-44AF-8235-207B2A5810B8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E886D47D-2D36-44AF-8235-207B2A5810B8}.Release|Any CPU.Build.0 = Release|Any CPU
-		{93FE88A5-A157-41A7-AE7D-64FE9DA6A461}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{93FE88A5-A157-41A7-AE7D-64FE9DA6A461}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{93FE88A5-A157-41A7-AE7D-64FE9DA6A461}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{93FE88A5-A157-41A7-AE7D-64FE9DA6A461}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

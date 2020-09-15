@@ -10,7 +10,7 @@ namespace Client
 {
     class Client
     {
-        static private NetManager m_NetManager;
+        static private NetManager<string> m_NetManager;
 
         static async Task Main(string[] args)
         {
@@ -23,7 +23,7 @@ namespace Client
 
             ///////////// example 2.
             Console.WriteLine("Press 'F1' to connect server...");
-            m_NetManager = new NetManager();
+            m_NetManager = new NetManager<string>(new StringProtocol());
             ConsoleKeyInfo key;
             while (m_NetManager.state != ConnectState.Connected)
             {
@@ -82,7 +82,7 @@ namespace Client
                 string data = "Hello world..." + index++;
                 //byte[] byteData = Encoding.ASCII.GetBytes(data);
                 Console.WriteLine("\n" + data);
-                m_NetManager.SetData(data);
+                m_NetManager.SetData(data, true);
 
                 //if (index == 3)
                 //    break;
@@ -100,7 +100,7 @@ namespace Client
                 if (key.Key == ConsoleKey.Enter)
                 {
                     //byte[] byteData = Encoding.ASCII.GetBytes(data);
-                    m_NetManager.SetData(data);
+                    m_NetManager.SetData(data, true);
                 }
                 else if (key.Key == ConsoleKey.Q)
                     break;
