@@ -1,14 +1,18 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Framework.NetWork.Log;
 
 namespace Framework.NetWork
 {
     public class NetManager
     {
         private NetClient m_NetClient;
+
+        public NetManager()
+        {
+            Trace.EnableConsole();
+        }
 
         async public Task Connect(string host, int port)
         {
@@ -34,12 +38,12 @@ namespace Framework.NetWork
 
         private void OnConnected()
         {
-            Console.WriteLine("Connected...");
+            Trace.Debug("Connected...");
         }
 
         private void OnDisconnected(int ret)
         {
-            Console.WriteLine("...Disconnected");
+            Trace.Debug("...Disconnected");
         }
 
         public void Tick()

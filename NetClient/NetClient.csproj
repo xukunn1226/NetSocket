@@ -41,6 +41,10 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Log\ConsoleListener.cs" />
+    <Compile Include="Log\DiagnosticListener.cs" />
+    <Compile Include="Log\ITraceListener.cs" />
+    <Compile Include="Log\Trace.cs" />
     <Compile Include="NetClient.cs" />
     <Compile Include="NetManager.cs" />
     <Compile Include="NetStreamBuffer.cs" />

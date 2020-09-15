@@ -4,6 +4,7 @@ using System.IO;
 using System.Net.Sockets;
 using System;
 using System.Threading.Tasks;
+using Framework.NetWork.Log;
 
 namespace Framework.NetWork
 {
@@ -216,7 +217,6 @@ namespace Framework.NetWork
             {
                 if (!m_Stream.CanRead)
                 {
-                    Console.WriteLine("ReadAsync: Can't read");
                     return 0;
                 }
 
@@ -233,17 +233,17 @@ namespace Framework.NetWork
             }
             catch (ObjectDisposedException e)
             {
-                Console.WriteLine(e.ToString());          // The NetworkStream is closed
+                Trace.Error(e.ToString());          // The NetworkStream is closed
                 return 0;
             }
             catch (InvalidOperationException e)
             {
-                Console.WriteLine(e.ToString());          // The NetworkStream does not support reading
+                Trace.Error(e.ToString());          // The NetworkStream does not support reading
                 return 0;
             }
             catch (IOException e)
             {
-                Console.WriteLine(e.Message);
+                Trace.Error(e.ToString());
                 return 0;
             }
         }
