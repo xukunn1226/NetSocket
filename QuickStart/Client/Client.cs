@@ -36,11 +36,19 @@ namespace Client
                         if (m_NetManager.state == ConnectState.Connected)
                             break;
                         else
-                            Console.WriteLine("Press 'F1' to retry connect server...");
+                            Console.WriteLine("Press 'F2' to retry connect server...");
+                    }
+                    else if(key.Key == ConsoleKey.F2)
+                    {
+                        await m_NetManager.Reconnect();
+                        if (m_NetManager.state == ConnectState.Connected)
+                            break;
+                        else
+                            Console.WriteLine("Press 'F2' to retry connect server...");
                     }
                     else
                     {
-                        Console.WriteLine("Error: Press 'F1' to retry connect server...");
+                        Console.WriteLine("Error: Press 'F2' to retry connect server...");
                     }
                 }
             }

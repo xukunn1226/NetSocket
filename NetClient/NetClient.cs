@@ -109,7 +109,7 @@ namespace Framework.NetWork
 
         internal void OnDisconnected(int ret)
         {
-            // release semaphore, then WriteAsync jump out of the while loop
+            // release semaphore, make WriteAsync jump out of the while loop
             if(m_SendBufferSema.CurrentCount == 0)
                 m_SendBufferSema.Release();
 

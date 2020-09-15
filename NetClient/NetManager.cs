@@ -42,6 +42,13 @@ namespace Framework.NetWork
             Console.WriteLine("...Disconnected");
         }
 
+        public void Tick()
+        {
+            if (m_NetClient == null)
+                return;
+            m_NetClient.FlushSending();
+        }
+
         public void SetData(string context)
         {
             byte[] byteData = Encoding.ASCII.GetBytes(context);
