@@ -5,7 +5,7 @@ using Framework.NetWork.Log;
 
 namespace Framework.NetWork
 {
-    public class NetManager
+    public class NetManager<TMessage> where TMessage : class, IMessage
     {
         private NetClient m_NetClient;
 
