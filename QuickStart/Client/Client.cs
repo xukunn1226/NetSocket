@@ -55,7 +55,8 @@ namespace Client
 
             // connect successfully
             //await AutoSending();
-            ManualSending();
+            //ManualSending();
+            CloseTest();
 
             Console.WriteLine("Press any key to quit");
             Console.ReadKey();
@@ -104,6 +105,19 @@ namespace Client
                 }
                 else if (key.Key == ConsoleKey.Q)
                     break;
+            }
+        }
+
+        static void CloseTest()
+        {
+            while (true)
+            {
+                Console.WriteLine("\nPress 'C' to quit");
+                ConsoleKeyInfo key = Console.ReadKey();
+                if (key.Key == ConsoleKey.C)
+                {
+                    m_NetManager.Close();
+                }
             }
         }
 

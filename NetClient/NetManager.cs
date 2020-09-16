@@ -10,6 +10,8 @@ namespace Framework.NetWork
         private NetClient           m_NetClient;
         private IProtocol<TMessage> m_Parser;
 
+        protected NetManager() { }
+
         public NetManager(IProtocol<TMessage> parser)
         {
             Trace.EnableConsole();
@@ -53,7 +55,7 @@ namespace Framework.NetWork
             if (m_NetClient == null)
                 return;
 
-            m_NetClient.FlushSending();
+            m_NetClient.Flush();
         }
 
         public void SetData(TMessage data, bool needFlush = false)
@@ -61,7 +63,7 @@ namespace Framework.NetWork
             byte[] buf = m_Parser.Serialize(data);
             m_NetClient.Send(buf);
             if(needFlush)
-                m_NetClient.FlushSending();
+                m_NetClient.Flush();
         }
 
         public TMessage ReceiveData()

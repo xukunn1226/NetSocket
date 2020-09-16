@@ -22,12 +22,6 @@ namespace Framework.NetWork
         private int             m_Tail;
         private int             m_IndexMask;
 
-        //public byte[]           Buffer  { get { return m_Buffer; } }
-
-        //public int              Head    { get { return m_Head; } }
-
-        //public int              Tail    { get { return m_Tail; } }
-
         public NetStreamBuffer(NetClient netClient, int capacity = 8 * 1024)
         {
             if (netClient == null) throw new ArgumentNullException();
@@ -182,28 +176,25 @@ namespace Framework.NetWork
             }
             catch (ObjectDisposedException e)
             {
-                Console.WriteLine(e.Message);       // The NetworkStream is closed
-                m_NetClient.OnDisconnected(-1);
+                // The NetworkStream is closed
+                m_NetClient.RaiseException(e);
             }
             catch (ArgumentNullException e)
             {
-                Console.WriteLine(e.Message);       // The buffer parameter is NULL
-                m_NetClient.OnDisconnected(-1);
+                // The buffer parameter is NULL
+                m_NetClient.RaiseException(e);
             }
             catch (ArgumentOutOfRangeException e)
             {
-                Console.WriteLine(e.Message);
-                m_NetClient.OnDisconnected(-1);
+                m_NetClient.RaiseException(e);
             }
             catch (InvalidOperationException e)
             {
-                Console.WriteLine(e.Message);       // The NetworkStream does not support writing
-                m_NetClient.OnDisconnected(-1);
+                m_NetClient.RaiseException(e);
             }
             catch (IOException e)
             {
-                Console.WriteLine(e.Message);       // There was a failure while writing to the network
-                m_NetClient.OnDisconnected(-1);
+                m_NetClient.RaiseException(e);
             }
         }
 

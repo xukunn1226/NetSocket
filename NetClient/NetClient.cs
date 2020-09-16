@@ -78,22 +78,22 @@ namespace Framework.NetWork
             catch(ArgumentNullException e)
             {
                 Console.WriteLine(e.ToString());
-                OnDisconnected(-1);
+                RaiseException(e);
             }
             catch(ArgumentOutOfRangeException e)
             {
                 Console.WriteLine(e.ToString());
-                OnDisconnected(-2);
+                RaiseException(e);
             }
             catch(ObjectDisposedException e)
             {
                 Console.WriteLine(e.ToString());
-                OnDisconnected(-3);
+                RaiseException(e);
             }
             catch(SocketException e)
             {
                 Console.WriteLine(e.ToString());
-                OnDisconnected(-4);
+                RaiseException(e);
             }
         }
 
@@ -111,11 +111,21 @@ namespace Framework.NetWork
         internal void OnDisconnected(int ret)
         {
             // release semaphore, make WriteAsync jump out of the while loop
-            if(m_SendBufferSema.CurrentCount == 0)
-                m_SendBufferSema.Release();
+            if (m_SendBufferSema != null)
+            {
+                if (m_SendBufferSema.CurrentCount == 0)
+                    m_SendBufferSema.Release();
+                //m_SendBufferSema.Dispose();
+                //m_SendBufferSema = null;
+            }
 
             m_State = ConnectState.Disconnected;
             m_DisconnectedHandler?.Invoke(ret);
+        }
+
+        internal void RaiseException(Exception e)
+        {
+            Console.WriteLine(e.ToString());
         }
 
         public void Close()
@@ -133,7 +143,7 @@ namespace Framework.NetWork
             }
         }
 
-        public void FlushSending()
+        public void Flush()
         {
             if (m_State == ConnectState.Connected && 
                 m_SendBufferSema != null &&
@@ -159,8 +169,7 @@ namespace Framework.NetWork
             }
             catch(SocketException e)
             {
-                Trace.Debug(e.ToString());
-                OnDisconnected(-1);
+                RaiseException(e);
             }
         }
 
@@ -172,13 +181,11 @@ namespace Framework.NetWork
             }
             catch(ArgumentNullException e)
             {
-                Trace.Debug(e.ToString());
-                OnDisconnected(-1);
+                RaiseException(e);
             }
             catch(ArgumentOutOfRangeException e)
             {
-                Trace.Debug(e.ToString());
-                OnDisconnected(-1);
+                RaiseException(e);
             }
         }
 
@@ -204,26 +211,25 @@ namespace Framework.NetWork
                 while(m_State == ConnectState.Connected)
                 {
                     m_ReceiveByte = await m_ReceiveBuffer.ReadAsync();
-                    if(m_ReceiveByte <= 0)
+                    if(m_ReceiveByte <= 0)              // 连接中断
                     {
-                        OnDisconnected(0);              // 远端主动断开网络
+                        RaiseException(new Exception("socket disconnected"));
                     }
                 }
             }
             catch(SocketException e)
             {
-                Trace.Debug(e.ToString());
-                OnDisconnected(-1);
+                RaiseException(e);
             }
         }
 
         // https://docs.microsoft.com/zh-cn/dotnet/api/system.net.sockets.socket.connected?redirectedfrom=MSDN&view=netcore-3.1#System_Net_Sockets_Socket_Connected
-        public bool IsConnected(Socket socket)
+        public bool IsConnected()
         {
-            if (socket == null)
+            if (m_Client == null || m_Client.Client == null)
                 throw new ArgumentNullException("socket");
 
-            if (!socket.Connected)      // Connected记录的是最近一次Send或Receive时的状态
+            if (!m_Client.Client.Connected)      // Connected记录的是最近一次Send或Receive时的状态
                 return false;
 
             bool isConnected = true;
@@ -259,9 +265,12 @@ namespace Framework.NetWork
         }
 
         // 适用于对端正常关闭socket下的本地socket状态检测，在非正常关闭如断电、拔网线的情况下不起作用
-        public bool IsConnected2(Socket socket)
+        public bool IsConnected2()
         {
-            if (socket.Poll(10, SelectMode.SelectRead) && (socket.Available == 0) || !socket.Connected)
+            if (m_Client == null || m_Client.Client == null)
+                throw new ArgumentNullException("socket");
+
+            if (m_Client.Client.Poll(10, SelectMode.SelectRead) && (m_Client.Client.Available == 0) || !m_Client.Client.Connected)
                 return false;
             else
                 return true;
