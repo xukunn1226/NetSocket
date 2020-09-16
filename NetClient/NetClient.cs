@@ -110,15 +110,6 @@ namespace Framework.NetWork
 
         internal void OnDisconnected(int ret)
         {
-            // release semaphore, make WriteAsync jump out of the while loop
-            if (m_SendBufferSema != null)
-            {
-                if (m_SendBufferSema.CurrentCount == 0)
-                    m_SendBufferSema.Release();
-                //m_SendBufferSema.Dispose();
-                //m_SendBufferSema = null;
-            }
-
             m_State = ConnectState.Disconnected;
             m_DisconnectedHandler?.Invoke(ret);
         }
@@ -126,20 +117,39 @@ namespace Framework.NetWork
         internal void RaiseException(Exception e)
         {
             Console.WriteLine(e.ToString());
+            DoClose();
+            OnDisconnected(0);
         }
 
         public void Close()
         {
             try
             {
-                m_Client.GetStream().Close();
-                m_Client.Close();
-
+                DoClose();
                 OnDisconnected(0);
             }
             catch(Exception e)
             {
                 Trace.Debug(e.ToString());
+            }
+        }
+
+        private void DoClose()
+        {
+            // release semaphore, make WriteAsync jump out of the while loop
+            if (m_SendBufferSema != null)
+            {
+                if (m_SendBufferSema.CurrentCount == 0)
+                    m_SendBufferSema.Release();
+                m_SendBufferSema.Dispose();
+                m_SendBufferSema = null;
+            }
+
+            if (m_Client != null)
+            {
+                m_Client.GetStream().Close();
+                m_Client.Close();
+                m_Client = null;
             }
         }
 
