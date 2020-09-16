@@ -25,17 +25,16 @@ namespace Client
             Console.WriteLine("Press 'F1' to connect server...");
             m_NetManager = new NetManager<string>(new StringProtocol());
             ConsoleKeyInfo key;
-            while (m_NetManager.state != ConnectState.Connected)
+            while (true)
             {
                 if(m_NetManager.state == ConnectState.Disconnected)
                 {
+                    Console.WriteLine("F1: Connect;     F2: Reconnect");
                     key = Console.ReadKey();
                     if (key.Key == ConsoleKey.F1)
                     {
                         await m_NetManager.Connect("127.0.0.1", 11000);
-                        if (m_NetManager.state == ConnectState.Connected)
-                            break;
-                        else
+                        if (m_NetManager.state != ConnectState.Connected)
                             Console.WriteLine("Press 'F2' to retry connect server...");
                     }
                     else if(key.Key == ConsoleKey.F2)
@@ -51,12 +50,22 @@ namespace Client
                         Console.WriteLine("Error: Press 'F2' to retry connect server...");
                     }
                 }
+                
+                if(m_NetManager.state == ConnectState.Connected)
+                {
+                    Console.WriteLine("\nPress 'C' to quit");
+                    key = Console.ReadKey();
+                    if (key.Key == ConsoleKey.C)
+                    {
+                        m_NetManager.Close();
+                    }
+                }
             }
 
             // connect successfully
             //await AutoSending();
             //ManualSending();
-            CloseTest();
+            //CloseTest();
 
             Console.WriteLine("Press any key to quit");
             Console.ReadKey();

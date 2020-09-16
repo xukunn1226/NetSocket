@@ -118,15 +118,13 @@ namespace Framework.NetWork
         {
             Console.WriteLine(e.ToString());
             DoClose();
-            OnDisconnected(0);
         }
 
         public void Close()
         {
             try
             {
-                DoClose();
-                OnDisconnected(0);
+                DoClose();                
             }
             catch(Exception e)
             {
@@ -136,11 +134,12 @@ namespace Framework.NetWork
 
         private void DoClose()
         {
-            // release semaphore, make WriteAsync jump out of the while loop
             if (m_SendBufferSema != null)
             {
+                // release semaphore, make WriteAsync jump out of the while loop
                 if (m_SendBufferSema.CurrentCount == 0)
                     m_SendBufferSema.Release();
+         
                 m_SendBufferSema.Dispose();
                 m_SendBufferSema = null;
             }
@@ -150,6 +149,8 @@ namespace Framework.NetWork
                 m_Client.GetStream().Close();
                 m_Client.Close();
                 m_Client = null;
+
+                OnDisconnected(0);
             }
         }
 
@@ -169,7 +170,7 @@ namespace Framework.NetWork
         {
             try
             {
-                while(m_State == ConnectState.Connected)
+                while(m_State == ConnectState.Connected && m_SendBufferSema != null)
                 {
                     await m_SendBufferSema.WaitAsync();         // CurrentCount==0将等待，直到Sema.CurrentCount > 0，执行完Sema.CurrentCount -= 1
                     m_isSendingBuffer = true;
