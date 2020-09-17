@@ -115,16 +115,16 @@ public class AsynchronousSocketListener
 
                 //// Check for end-of-file tag. If it is not there, read
                 //// more data.  
-                //content = state.sb.ToString();
+                content = state.sb.ToString();
                 //if (content.IndexOf("<EOF>") > -1)
-                //{
-                //    // All the data has been read from the
-                //    // client. Display it on the console.  
-                //    Console.WriteLine("Read {0} bytes from socket. \n Data : {1}",
-                //        content.Length, content);
-                //    // Echo the data back to the client.  
-                //    Send(handler, content);
-                //}
+                {
+                    // All the data has been read from the
+                    // client. Display it on the console.  
+                    Console.WriteLine("Read {0} bytes from socket. \n Data : {1}",
+                        content.Length, content);
+                    // Echo the data back to the client.  
+                    Send(handler, content);
+                }
                 //else
                 //{
                 //    // Not all data received. Get more.  
@@ -134,7 +134,7 @@ public class AsynchronousSocketListener
 
                 content = state.sb.ToString();
                 Console.WriteLine($"receive message: {content}");
-                if(string.Compare(content, "shutdown", StringComparison.OrdinalIgnoreCase) == 0)
+                if (string.Compare(content, "shutdown", StringComparison.OrdinalIgnoreCase) == 0)
                 {
                     handler.Shutdown(SocketShutdown.Both);
                     handler.Close();
@@ -173,8 +173,8 @@ public class AsynchronousSocketListener
             int bytesSent = handler.EndSend(ar);
             Console.WriteLine("Sent {0} bytes to client.", bytesSent);
 
-            handler.Shutdown(SocketShutdown.Both);
-            handler.Close();
+            //handler.Shutdown(SocketShutdown.Both);
+            //handler.Close();
 
         }
         catch (Exception e)

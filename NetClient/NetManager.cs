@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Text;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Framework.NetWork.Log;
 
@@ -7,8 +7,9 @@ namespace Framework.NetWork
 {
     public class NetManager<TMessage> where TMessage : class
     {
-        private NetClient           m_NetClient;
-        private IProtocol<TMessage> m_Parser;
+        private NetClient               m_NetClient;
+        private IProtocol<TMessage>     m_Parser;
+        private List<TMessage>          m_MessageList = new List<TMessage>();
 
         protected NetManager() { }
 
@@ -50,12 +51,13 @@ namespace Framework.NetWork
             Trace.Debug("...Disconnected");
         }
 
-        public void Tick()
+        public void Update()
         {
             if (m_NetClient == null)
                 return;
 
-            m_NetClient.Flush();
+            m_NetClient.FlushWrite();
+            ReceiveData();
         }
 
         public void SetData(TMessage data, bool needFlush = false)
@@ -63,21 +65,44 @@ namespace Framework.NetWork
             byte[] buf = m_Parser.Serialize(data);
             m_NetClient.Send(buf);
             if(needFlush)
-                m_NetClient.Flush();
+                m_NetClient.FlushWrite();
         }
 
-        public TMessage ReceiveData()
+        private void ReceiveData()
         {
             int offset;
-            int length;
+            int length;     // 已接收的消息长度
             ref readonly byte[] data = ref m_NetClient.BeginRead(out offset, out length);
             if (length == 0)
-                return default(TMessage);
+                return;
 
-            int realLength;
-            TMessage msg = m_Parser.Deserialize(in data, offset, length, out realLength);
-            m_NetClient.EndRead(realLength);
-            return msg;
+            int totalRealLength = 0;            // 实际解析的总长度(byte)
+            int startOffset = offset;
+            int totalLength = length;
+            m_MessageList.Clear();
+            while (true)
+            {
+                startOffset += totalRealLength;
+                totalLength -= totalRealLength;
+
+                int realLength;                 // 单次解析的长度(byte)
+                TMessage msg;
+                bool success = m_Parser.Deserialize(in data, startOffset, totalLength, out realLength, out msg);
+                if (success)
+                    m_MessageList.Add(msg);
+
+                totalRealLength += realLength;
+                if (!success || totalRealLength == totalLength)
+                    break;                      // 解析失败或者已接收的消息长度解析完了
+            }
+            m_NetClient.EndRead(totalRealLength);
+
+            // dispatch
+            foreach(var msg in m_MessageList)
+            {
+                //Dispatch(msg);
+                Trace.Debug($"Receive:=== {msg}");
+            }
         }
     }
 }

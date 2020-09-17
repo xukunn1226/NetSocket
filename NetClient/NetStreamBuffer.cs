@@ -224,17 +224,17 @@ namespace Framework.NetWork
             }
             catch (ObjectDisposedException e)
             {
-                Trace.Error(e.ToString());          // The NetworkStream is closed
+                //Trace.Error(e.ToString());          // The NetworkStream is closed
                 return 0;
             }
             catch (InvalidOperationException e)
             {
-                Trace.Error(e.ToString());          // The NetworkStream does not support reading
+                //Trace.Error(e.ToString());          // The NetworkStream does not support reading
                 return 0;
             }
             catch (IOException e)
             {
-                Trace.Error(e.ToString());
+                //Trace.Error(e.ToString());
                 return 0;
             }
         }

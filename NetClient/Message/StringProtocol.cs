@@ -8,10 +8,11 @@ namespace Framework.NetWork
 {
     public class StringProtocol : IProtocol<string>
     {
-        public string Deserialize(in byte[] data, int offset, int length, out int realLength)
+        public bool Deserialize(in byte[] data, int offset, int length, out int realLength, out string msg)
         {
             realLength = length;
-            return Encoding.ASCII.GetString(data, offset, length);
+            msg = Encoding.ASCII.GetString(data, offset, length);
+            return true;
         }
 
         public byte[] Serialize(string msg)

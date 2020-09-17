@@ -39,6 +39,7 @@ namespace Framework.NetWork
         private SemaphoreSlim       m_SendBufferSema;                                               // 控制是否可以消息发送的信号量
                                                                                                     // The count is decremented each time a thread enters the semaphore, and incremented each time a thread releases the semaphore
         private bool                m_isSendingBuffer;                                              // 发送消息IO是否进行中
+        private bool                m_QuitWriteOp;
 
         private int                 m_ReceiveByte;
 
@@ -59,15 +60,17 @@ namespace Framework.NetWork
             m_Client = new TcpClient();
             m_Client.NoDelay = true;
 
-            m_SendBufferSema = new SemaphoreSlim(0, 1);
-            m_isSendingBuffer = false;
-
             try
             {
                 IPAddress ip = IPAddress.Parse(m_Host);
                 m_State = ConnectState.Connecting;
-                await m_Client.ConnectAsync(ip, m_Port);                
+                await m_Client.ConnectAsync(ip, m_Port);
                 OnConnected();
+
+                // setup environment for sending & receiving data
+                m_SendBufferSema = new SemaphoreSlim(0, 1);
+                m_isSendingBuffer = false;
+                m_QuitWriteOp = false;
 
                 m_SendBuffer.SetStream(m_Client.GetStream());
                 m_ReceiveBuffer.SetStream(m_Client.GetStream());
@@ -77,22 +80,22 @@ namespace Framework.NetWork
             }
             catch(ArgumentNullException e)
             {
-                Console.WriteLine(e.ToString());
+                Trace.Debug(e.ToString());
                 RaiseException(e);
             }
             catch(ArgumentOutOfRangeException e)
             {
-                Console.WriteLine(e.ToString());
+                Trace.Debug(e.ToString());
                 RaiseException(e);
             }
             catch(ObjectDisposedException e)
             {
-                Console.WriteLine(e.ToString());
+                Trace.Debug(e.ToString());
                 RaiseException(e);
             }
             catch(SocketException e)
             {
-                Console.WriteLine(e.ToString());
+                Trace.Debug(e.ToString());
                 RaiseException(e);
             }
         }
@@ -116,15 +119,15 @@ namespace Framework.NetWork
 
         internal void RaiseException(Exception e)
         {
-            Console.WriteLine(e.ToString());
-            DoClose();
+            //Trace.Debug(e.ToString());
+            InternalClose();
         }
 
         public void Close()
         {
             try
             {
-                DoClose();                
+                InternalClose();                
             }
             catch(Exception e)
             {
@@ -132,21 +135,25 @@ namespace Framework.NetWork
             }
         }
 
-        private void DoClose()
+        private void InternalClose()
         {
             if (m_SendBufferSema != null)
             {
                 // release semaphore, make WriteAsync jump out of the while loop
                 if (m_SendBufferSema.CurrentCount == 0)
+                {
+                    m_QuitWriteOp = true;                       // trigger quitting WriteAsync loop
                     m_SendBufferSema.Release();
-         
+                }
+
                 m_SendBufferSema.Dispose();
                 m_SendBufferSema = null;
             }
 
             if (m_Client != null)
             {
-                m_Client.GetStream().Close();
+                if(m_Client.Connected)                          // 当远端主动断开网络时，NetworkStream呈已关闭状态
+                    m_Client.GetStream().Close();
                 m_Client.Close();
                 m_Client = null;
 
@@ -154,7 +161,7 @@ namespace Framework.NetWork
             }
         }
 
-        public void Flush()
+        public void FlushWrite()
         {
             if (m_State == ConnectState.Connected && 
                 m_SendBufferSema != null &&
@@ -170,9 +177,11 @@ namespace Framework.NetWork
         {
             try
             {
-                while(m_State == ConnectState.Connected && m_SendBufferSema != null)
+                while(m_State == ConnectState.Connected)
                 {
                     await m_SendBufferSema.WaitAsync();         // CurrentCount==0将等待，直到Sema.CurrentCount > 0，执行完Sema.CurrentCount -= 1
+                    if (m_QuitWriteOp)
+                        break;
                     m_isSendingBuffer = true;
                     await m_SendBuffer.FlushWrite();
                     m_isSendingBuffer = false;

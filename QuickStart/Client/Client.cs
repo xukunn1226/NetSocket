@@ -5,21 +5,41 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Net.Sockets;
 using Framework.NetWork;
+using System.Threading;
+using System.Timers;
 
 namespace Client
 {
     class Client
     {
         static private NetManager<string> m_NetManager;
+        private static System.Timers.Timer myTimer;
+
+        private static void OnTimedEvent(Object source, ElapsedEventArgs e)
+        {
+            //Console.WriteLine("Elapsed event raised at {0:HH:mm:ss.fff}", e.SignalTime);
+
+            m_NetManager?.Update();
+        }
 
         static async Task Main(string[] args)
         {
-            ////////////// example 1.
-            //await Task.Run(() => Connect());
-            //Connect();
+            //myTimer = new System.Timers.Timer(10);
+            //myTimer.Elapsed += OnTimedEvent;
+            //myTimer.AutoReset = true;
+            //myTimer.Enabled = true;
+            //Console.WriteLine("\nPress Enter key to stop...\n");
+            //Console.WriteLine("Timer started  {0:HH:mm:ss.fff}  ", DateTime.Now);
+            //Console.ReadLine();
+            //myTimer.Stop();
+            //myTimer.Dispose();
+            //Console.WriteLine("Finished...");
+            //return;
 
-            //await Task.Delay(3000);
 
+
+
+            Console.WriteLine($"Main            {Thread.CurrentThread.ManagedThreadId}");
 
             ///////////// example 2.
             Console.WriteLine("Press 'F1' to connect server...");
@@ -50,8 +70,11 @@ namespace Client
                         Console.WriteLine("Error: Press 'F2' to retry connect server...");
                     }
                 }
-                
-                if(m_NetManager.state == ConnectState.Connected)
+
+                await AutoSending();
+
+                // test close socket
+                if (m_NetManager.state == ConnectState.Connected)
                 {
                     Console.WriteLine("\nPress 'C' to quit");
                     key = Console.ReadKey();
@@ -63,9 +86,8 @@ namespace Client
             }
 
             // connect successfully
-            //await AutoSending();
+
             //ManualSending();
-            //CloseTest();
 
             Console.WriteLine("Press any key to quit");
             Console.ReadKey();
@@ -87,15 +109,16 @@ namespace Client
         static async Task AutoSending()
         {
             int index = 0;
-            while (true)
+            while (true && m_NetManager.state == ConnectState.Connected)
             {
                 string data = "Hello world..." + index++;
-                //byte[] byteData = Encoding.ASCII.GetBytes(data);
-                Console.WriteLine("\n" + data);
-                m_NetManager.SetData(data, true);
+                Console.WriteLine("\n Sending...:" + data);
+                m_NetManager.SetData(data);
+                m_NetManager.Update();
 
-                //if (index == 3)
-                //    break;
+                if (index == 300)
+                    m_NetManager.Close();
+
                 await Task.Delay(10);
             }
         }
