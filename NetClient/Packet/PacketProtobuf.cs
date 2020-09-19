@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -19,6 +20,10 @@ namespace Framework.NetWork
 
         public byte[] Serialize(IMessage msg)
         {
+            // assemble packet
+            MemoryStream ms = new MemoryStream();
+            
+
             //return Encoding.ASCII.GetBytes(msg);
             return null;
         }

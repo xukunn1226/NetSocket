@@ -216,7 +216,7 @@ namespace Framework.NetWork
 
         public ref readonly byte[] BeginRead(out int offset, out int length)
         {
-            return ref m_ReceiveBuffer.Fetch(out offset, out length);
+            return ref m_ReceiveBuffer.FetchBufferToRead(out offset, out length);
         }
 
         public void EndRead(int length)

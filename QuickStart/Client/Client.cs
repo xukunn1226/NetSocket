@@ -6,38 +6,30 @@ using System.Threading.Tasks;
 using System.Net.Sockets;
 using Framework.NetWork;
 using System.Threading;
-using System.Timers;
+using System.IO;
 
 namespace Client
 {
     class Client
     {
         static private NetManager<string> m_NetManager;
-        private static System.Timers.Timer myTimer;
-
-        private static void OnTimedEvent(Object source, ElapsedEventArgs e)
+        
+        static void TestRef()
         {
-            //Console.WriteLine("Elapsed event raised at {0:HH:mm:ss.fff}", e.SignalTime);
+            byte[] bb = new byte[3] { 2, 1, 0 };
+            ref byte[] aa = ref bb;
+            MemoryStream ms = new MemoryStream(aa, 0, 3, true, true);
+            byte[] cc = ms.GetBuffer();
+            //aa = ref bb;
+            aa[1] = 4;
 
-            m_NetManager?.Update();
+            bb = new byte[3] { 5, 5, 5 };
+            byte[] dd = ms.GetBuffer();
         }
 
         static async Task Main(string[] args)
         {
-            //myTimer = new System.Timers.Timer(10);
-            //myTimer.Elapsed += OnTimedEvent;
-            //myTimer.AutoReset = true;
-            //myTimer.Enabled = true;
-            //Console.WriteLine("\nPress Enter key to stop...\n");
-            //Console.WriteLine("Timer started  {0:HH:mm:ss.fff}  ", DateTime.Now);
-            //Console.ReadLine();
-            //myTimer.Stop();
-            //myTimer.Dispose();
-            //Console.WriteLine("Finished...");
-            //return;
-
-
-
+            //TestRef();
 
             Console.WriteLine($"Main            {Thread.CurrentThread.ManagedThreadId}");
 

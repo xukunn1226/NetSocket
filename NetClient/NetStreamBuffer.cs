@@ -102,6 +102,31 @@ namespace Framework.NetWork
             return Write(data, 0, data.Length);
         }
 
+        // 获取buff，可以写入指定大小(length)的数据
+        // param: [out]buf, buffer to write
+        // param: [out]offset, the position where can be written
+        // param: [in]length, the length of write, expand capacity of buffer internally
+        // return: true if expanding capacity; return false, otherwise
+        internal bool FetchDesiredBufferToWrite(out byte[] buf, out int offset, int length)
+        {
+            //int maxCount = Math.Min(GetFreeCapacity(), m_Buffer.Length - m_Head);        // 一次最多填充至尾端
+            bool isExpandCapacity = false;
+            while(length > GetFreeCapacity())
+            {
+                EnsureCapacity(m_Buffer.Length + 1);
+                isExpandCapacity = true;
+            }
+            offset = m_Head;
+            buf = m_Buffer;
+            return isExpandCapacity;
+        }
+
+        // 获取连续的空闲buf大小
+        private int GetContinuousFreeCapacity()
+        {
+            return Math.Min(GetFreeCapacity(), m_Buffer.Length - m_Head);       // 因为需要连续空间，所以只能到尾端
+        }
+
         private int NextPowerOfTwo(int n)
         {
             n--;
@@ -216,7 +241,7 @@ namespace Framework.NetWork
                     EnsureCapacity(m_Buffer.Length + 1);
                 }
 
-                int maxCount = Math.Min(GetFreeCapacity(), m_Buffer.Length - m_Head);        // 一次最多填充至尾端
+                int maxCount = GetContinuousFreeCapacity();        // 获得连续的空闲buf
 
                 int count = await m_Stream.ReadAsync(m_Buffer, m_Head, maxCount);
                 m_Head = (m_Head + count) & m_IndexMask;
@@ -239,7 +264,7 @@ namespace Framework.NetWork
             }
         }
         
-        internal ref readonly byte[] Fetch(out int offset, out int length)
+        internal ref readonly byte[] FetchBufferToRead(out int offset, out int length)
         {
             offset = m_Tail;
             length = GetUsedCapacity();
