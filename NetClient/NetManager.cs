@@ -8,12 +8,12 @@ namespace Framework.NetWork
     public class NetManager<TMessage> where TMessage : class
     {
         private NetClient               m_NetClient;
-        private IProtocol<TMessage>     m_Parser;
+        private IPacket<TMessage>     m_Parser;
         private List<TMessage>          m_MessageList = new List<TMessage>();
 
         protected NetManager() { }
 
-        public NetManager(IProtocol<TMessage> parser)
+        public NetManager(IPacket<TMessage> parser)
         {
             Trace.EnableConsole();
             m_Parser = parser;

@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Framework.NetWork
 {
-    public class StringProtocol : IProtocol<string>
+    public class StringPacket : IPacket<string>
     {
         public bool Deserialize(in byte[] data, int offset, int length, out int realLength, out string msg)
         {
