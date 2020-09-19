@@ -43,7 +43,7 @@ namespace Client
 
             ///////////// example 2.
             Console.WriteLine("Press 'F1' to connect server...");
-            m_NetManager = new NetManager<string>(new StringPacket());
+            m_NetManager = new NetManager<string>(new PacketString());
             ConsoleKeyInfo key;
             while (true)
             {

@@ -31,6 +31,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Google.Protobuf">
+      <HintPath>ThirdParty\Proto\net45\Google.Protobuf.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -45,8 +48,9 @@
     <Compile Include="Log\DiagnosticListener.cs" />
     <Compile Include="Log\ITraceListener.cs" />
     <Compile Include="Log\Trace.cs" />
-    <Compile Include="Message\IProtocol.cs" />
-    <Compile Include="Message\StringProtocol.cs" />
+    <Compile Include="Packet\IPacket.cs" />
+    <Compile Include="Packet\PacketProtobuf.cs" />
+    <Compile Include="Packet\PacketString.cs" />
     <Compile Include="NetClient.cs" />
     <Compile Include="NetManager.cs" />
     <Compile Include="NetStreamBuffer.cs" />
