@@ -24,6 +24,7 @@ namespace Framework.NetWork
         {
             m_Head = 0;
             m_Tail = 0;
+            m_Fence = -1;
         }
 
         internal bool IsEmpty()
@@ -51,10 +52,94 @@ namespace Framework.NetWork
             return m_Head >= m_Tail ? m_Head - m_Tail : m_Buffer.Length - (m_Tail - m_Head);
         }
 
+        private int NextPowerOfTwo(int n)
+        {
+            n--;
+            n |= n >> 1;
+            n |= n >> 2;
+            n |= n >> 4;
+            n |= n >> 8;
+            n |= n >> 16;
+            n++;
+            return n;
+        }
+
+        private void EnsureCapacity(int min)
+        {
+            if (m_Buffer == null || m_Buffer.Length < min)
+            {
+                int newCapacity = m_Buffer == null || m_Buffer.Length == 0 ? m_DefaultCapacity : m_Buffer.Length * 2;
+                if ((uint)newCapacity > Int32.MaxValue)
+                    newCapacity = Int32.MaxValue;
+                if (newCapacity < min)
+                    newCapacity = min;
+                newCapacity = NextPowerOfTwo(newCapacity);
+
+                // expand buffer
+                byte[] newBuf = new byte[newCapacity];
+                if (m_Head > m_Tail)
+                {
+                    System.Buffer.BlockCopy(m_Buffer, m_Tail, newBuf, m_Tail, m_Head - m_Tail);
+                    //m_Tail = m_Tail;      // no change
+                    //m_Head = m_Head;      // no change
+                }
+                else if (m_Head < m_Tail)
+                {
+                    int countToEnd = m_Buffer.Length - m_Tail;
+                    System.Buffer.BlockCopy(m_Buffer, m_Tail, newBuf, newBuf.Length - countToEnd, countToEnd);
+
+                    if (m_Head > 0)
+                        System.Buffer.BlockCopy(m_Buffer, 0, newBuf, 0, m_Head);
+
+                    m_Tail = newBuf.Length - countToEnd;
+                    //m_Head = m_Head;      // no change
+                    if (m_Fence > 0)
+                    {
+                        if (m_Fence < m_Tail)
+                            throw new ArgumentException($"m_Fence{m_Fence} < m_Tail{m_Tail}");
+                        m_Fence = newBuf.Length - (m_Buffer.Length - m_Fence);
+                    }
+                }
+                m_Buffer = newBuf;
+                m_IndexMask = m_Buffer.Length - 1;
+            }
+        }
+
+        // get continous free capacity from head to buffer end
+        private int GetContinuousFreeCapacityToEnd()
+        {
+            return Math.Min(GetFreeCapacity(), m_Head >= m_Tail ? m_Buffer.Length - m_Head : 0);
+        }
+
+        // get continous free capacity from buffer start to tail
+        private int GetContinuousFreeCapacityFromStart()
+        {
+            int count = 0;
+            if (m_Head < m_Tail)
+            {
+                count = m_Tail - m_Head;
+            }
+            else if (m_Head > m_Tail)
+            {
+                count = m_Tail;
+            }
+            else
+            {
+                count = m_Buffer.Length - m_Head;
+            }
+
+            return Math.Min(GetFreeCapacity(), count);
+        }
+
+        private int GetContinuousUsedCapacity()
+        {
+            return m_Head >= m_Tail ? m_Head - m_Tail : m_Buffer.Length - m_Tail;
+        }
+
         internal ref readonly byte[] FetchBufferToRead(out int offset, out int length)
         {
             offset = m_Tail;
-            length = GetUsedCapacity();
+            length = GetContinuousUsedCapacity();
             return ref m_Buffer;
         }
 
@@ -127,81 +212,6 @@ namespace Framework.NetWork
         internal void FinishWrite(int length)
         {
             m_Head = (m_Head + length) % m_IndexMask;
-        }
-
-        // get continous free capacity from head to buffer end
-        private int GetContinuousFreeCapacityToEnd()
-        {
-            return Math.Min(GetFreeCapacity(), m_Head >= m_Tail ? m_Buffer.Length - m_Head : 0);
-        }
-
-        // get continous free capacity from buffer start to tail
-        private int GetContinuousFreeCapacityFromStart()
-        {
-            int count = 0;
-            if(m_Head < m_Tail)
-            {
-                count = m_Tail - m_Head;
-            }
-            else if(m_Head > m_Tail)
-            {
-                count = m_Tail;
-            }
-            else
-            {
-                count = m_Buffer.Length - m_Head;
-            }
-
-            return Math.Min(GetFreeCapacity(), count);
-        }
-
-        private int NextPowerOfTwo(int n)
-        {
-            n--;
-            n |= n >> 1;
-            n |= n >> 2;
-            n |= n >> 4;
-            n |= n >> 8;
-            n |= n >> 16;
-            n++;
-            return n;
-        }
-
-        private void EnsureCapacity(int min)
-        {
-            if (m_Buffer == null || m_Buffer.Length < min)
-            {
-                int newCapacity = m_Buffer == null || m_Buffer.Length == 0 ? m_DefaultCapacity : m_Buffer.Length * 2;
-                if ((uint)newCapacity > Int32.MaxValue)
-                    newCapacity = Int32.MaxValue;
-                if (newCapacity < min)
-                    newCapacity = min;
-                newCapacity = NextPowerOfTwo(newCapacity);
-
-                // expand buffer
-                byte[] newBuf = new byte[newCapacity];
-                if (m_Head > m_Tail)
-                {
-                    System.Buffer.BlockCopy(m_Buffer, m_Tail, newBuf, m_Tail, m_Head - m_Tail);
-                    //m_Tail = m_Tail;      // no change
-                    //m_Head = m_Head;      // no change
-                }
-                else if (m_Head < m_Tail)
-                {
-                    int countToEnd = m_Buffer.Length - m_Tail;
-                    System.Buffer.BlockCopy(m_Buffer, m_Tail, newBuf, newBuf.Length - countToEnd, countToEnd);
-
-                    if (m_Head > 0)
-                        System.Buffer.BlockCopy(m_Buffer, 0, newBuf, 0, m_Head);
-
-                    m_Tail = newBuf.Length - countToEnd;
-                    //m_Head = m_Head;      // no change
-                    if(m_Fence > -1)
-                        m_Fence = newBuf.Length - (m_Buffer.Length - m_Fence);
-                }
-                m_Buffer = newBuf;
-                m_IndexMask = m_Buffer.Length - 1;
-            }
         }
     }
 }
