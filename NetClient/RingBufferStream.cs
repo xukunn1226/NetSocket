@@ -8,12 +8,12 @@ namespace Framework.NetWork
 {
     internal class RingBufferStream
     {
-        private const int       m_DefaultCapacity = 1024;
+        private const int       m_DefaultCapacity   = 1024;
         private byte[]          m_Buffer;
         private int             m_Head;
         private int             m_Tail;
+        private int             m_Fence             = -1;
         private int             m_IndexMask;
-        private int             m_FenceLength;
 
         internal RingBufferStream(int capacity = 8 * 1024)
         {
@@ -105,25 +105,28 @@ namespace Framework.NetWork
         // return: true if expanding capacity; return false, otherwise
         internal bool FetchBufferToWrite(out byte[] buf, out int offset, int length)
         {
-            while(length > GetContinuousFreeCapacityToEnd() && length > GetContinuousFreeCapacityFromStart())
-            {
-                EnsureCapacity(m_Buffer.Length + 1);
-            }
-
-            if(length < GetContinuousFreeCapacityToEnd())
-            {
-
-            }
-
             bool isExpandCapacity = false;
-            while(length > GetFreeCapacity())
+            while (length > GetContinuousFreeCapacityToEnd() && length > GetContinuousFreeCapacityFromStart())
             {
                 EnsureCapacity(m_Buffer.Length + 1);
                 isExpandCapacity = true;
             }
+
+            int countToEnd = GetContinuousFreeCapacityToEnd();
+            if(countToEnd > 0 && length > countToEnd)
+            { // 尾端空间不够则插入fence
+                m_Fence = m_Head;
+                m_Head = 0;     // skip the remaining buffer, start from beginning
+            }
+
             offset = m_Head;
             buf = m_Buffer;
             return isExpandCapacity;
+        }
+
+        internal void FinishWrite(int length)
+        {
+            m_Head = (m_Head + length) % m_IndexMask;
         }
 
         // get continous free capacity from head to buffer end
@@ -135,7 +138,21 @@ namespace Framework.NetWork
         // get continous free capacity from buffer start to tail
         private int GetContinuousFreeCapacityFromStart()
         {
-            return Math.Min(GetFreeCapacity(), m_Head < m_Tail ? m_Tail - m_Head : m_Tail);
+            int count = 0;
+            if(m_Head < m_Tail)
+            {
+                count = m_Tail - m_Head;
+            }
+            else if(m_Head > m_Tail)
+            {
+                count = m_Tail;
+            }
+            else
+            {
+                count = m_Buffer.Length - m_Head;
+            }
+
+            return Math.Min(GetFreeCapacity(), count);
         }
 
         private int NextPowerOfTwo(int n)
@@ -179,6 +196,8 @@ namespace Framework.NetWork
 
                     m_Tail = newBuf.Length - countToEnd;
                     //m_Head = m_Head;      // no change
+                    if(m_Fence > -1)
+                        m_Fence = newBuf.Length - (m_Buffer.Length - m_Fence);
                 }
                 m_Buffer = newBuf;
                 m_IndexMask = m_Buffer.Length - 1;
