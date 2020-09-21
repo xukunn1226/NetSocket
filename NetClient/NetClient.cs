@@ -6,6 +6,7 @@ using System.Net.Sockets;
 using System.Net;
 using System.Threading;
 using Framework.NetWork.Log;
+using System.Globalization;
 
 namespace Framework.NetWork
 {
@@ -169,6 +170,11 @@ namespace Framework.NetWork
                 !m_isSendingBuffer &&                           // 上次消息已发送完成
                 !m_SendBuffer.IsEmpty())                        // 已缓存一定的待发送消息
             {
+                // cache the pending sending data
+                //head = ...;
+                //tail = ...;
+                //fence = ...;
+
                 m_SendBufferSema.Release();                     // Sema.CurrentCount += 1
             }
         }
