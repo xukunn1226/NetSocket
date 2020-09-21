@@ -6,48 +6,49 @@ using System.Threading.Tasks;
 
 namespace Framework.NetWork
 {
-    internal class RingBufferStream
+    // 非通用ringbuffer，仅适配网络传输用
+    public class NetRingBufferStream
     {
         private const int       m_DefaultCapacity   = 1024;
         private byte[]          m_Buffer;
         private int             m_Head;
         private int             m_Tail;
-        private int             m_Fence             = -1;
+        private int             m_Fence;                    // valid if greater than zero
         private int             m_IndexMask;
 
-        internal RingBufferStream(int capacity = 8 * 1024)
+        public NetRingBufferStream(int capacity = 8 * 1024)
         {
             EnsureCapacity(capacity);
         }
 
-        private void Clear()
+        public void Clear()
         {
             m_Head = 0;
             m_Tail = 0;
-            m_Fence = -1;
+            m_Fence = 0;
         }
 
-        internal bool IsEmpty()
+        public bool IsEmpty()
         {
             return m_Head == m_Tail;
         }
 
-        internal bool IsFull()
+        public bool IsFull()
         {
             return ((m_Head + 1) & m_IndexMask) == m_Tail;
         }
 
-        private int GetMaxCapacity()
+        public int GetMaxCapacity()
         {
             return m_Buffer.Length - 1;
         }
 
-        private int GetFreeCapacity()
+        public int GetFreeCapacity()
         {
             return GetMaxCapacity() - GetUsedCapacity();
         }
 
-        private int GetUsedCapacity()
+        public int GetUsedCapacity()
         {
             return m_Head >= m_Tail ? m_Head - m_Tail : m_Buffer.Length - (m_Tail - m_Head);
         }
@@ -136,19 +137,21 @@ namespace Framework.NetWork
             return m_Head >= m_Tail ? m_Head - m_Tail : m_Buffer.Length - m_Tail;
         }
 
-        internal ref readonly byte[] FetchBufferToRead(out int offset, out int length)
+        // 获取已接收到的网络数据
+        public ref readonly byte[] FetchBufferToRead(out int offset, out int length)
         {
             offset = m_Tail;
             length = GetContinuousUsedCapacity();
             return ref m_Buffer;
         }
 
-        internal void FinishRead(int length)
+        public void FinishRead(int length)
         {
             m_Tail = (m_Tail + length) & m_IndexMask;
         }
 
-        internal bool Write(byte[] data, int offset, int length)
+        // 写入待发送的数据
+        public bool Write(byte[] data, int offset, int length)
         {
             if (data == null)
                 throw new ArgumentNullException("data == null");
@@ -178,17 +181,17 @@ namespace Framework.NetWork
             return true;
         }
 
-        internal bool Write(byte[] data)
+        public bool Write(byte[] data)
         {
             return Write(data, 0, data.Length);
         }
 
-        // 获取buff，可以写入指定大小且连续(length)的数据
+        // 获取连续地、制定大小(length)的buff，用于上层写入数据
         // param: [out]buf, buffer to write
         // param: [out]offset, the position where can be written
         // param: [in]length, the length of write, expand buffer's capacity internally if necessary
         // return: true if expanding capacity; return false, otherwise
-        internal bool FetchBufferToWrite(out byte[] buf, out int offset, int length)
+        public bool FetchBufferToWrite(int length, out byte[] buf, out int offset)
         {
             bool isExpandCapacity = false;
             while (length > GetContinuousFreeCapacityToEnd() && length > GetContinuousFreeCapacityFromStart())
@@ -209,9 +212,11 @@ namespace Framework.NetWork
             return isExpandCapacity;
         }
 
-        internal void FinishWrite(int length)
+        public void FinishWrite(int length)
         {
-            m_Head = (m_Head + length) % m_IndexMask;
+            // 数据包发送完成更新m_Tail
+            m_Tail = (m_Tail + length) % m_IndexMask;
+            m_Fence = 0;        // 因网络数据包一次发送完成，所以Fence可以重置
         }
     }
 }
