@@ -7,50 +7,56 @@ using System.Threading.Tasks;
 namespace Framework.NetWork
 {
     // 非通用ringbuffer，仅适配网络传输用
-    public class NetRingBufferStream
+    internal class NetRingBuffer
     {
         private const int       m_DefaultCapacity   = 1024;
         private byte[]          m_Buffer;
-        private int             m_Head;
-        private int             m_Tail;
-        private int             m_Fence;                    // valid if greater than zero
         private int             m_IndexMask;
+        internal byte[]         Buffer  { get { return m_Buffer; } }
+        internal int            Head    { get; private set; }
+        internal int            Tail    { get; private set; }
+        internal int            Fence   { get; private set; }
 
-        public NetRingBufferStream(int capacity = 8 * 1024)
+        internal NetRingBuffer(int capacity = 8 * 1024)
         {
             EnsureCapacity(capacity);
         }
 
-        public void Clear()
+        internal void Clear()
         {
-            m_Head = 0;
-            m_Tail = 0;
-            m_Fence = 0;
+            Head = 0;
+            Tail = 0;
+            Fence = 0;
         }
 
-        public bool IsEmpty()
+        internal bool IsEmpty()
         {
-            return m_Head == m_Tail;
+            return Head == Tail;
         }
 
-        public bool IsFull()
+        internal bool IsFull()
         {
-            return ((m_Head + 1) & m_IndexMask) == m_Tail;
+            return ((Head + 1) & m_IndexMask) == Tail;
         }
 
-        public int GetMaxCapacity()
+        internal int GetMaxCapacity()
         {
             return m_Buffer.Length - 1;
         }
 
-        public int GetFreeCapacity()
+        internal int GetFreeCapacity()
         {
             return GetMaxCapacity() - GetUsedCapacity();
         }
 
-        public int GetUsedCapacity()
+        internal int GetUsedCapacity()
         {
-            return m_Head >= m_Tail ? m_Head - m_Tail : m_Buffer.Length - (m_Tail - m_Head);
+            return Head >= Tail ? Head - Tail : m_Buffer.Length - (Tail - Head);
+        }
+
+        internal int GetUsedCapacity(int head)
+        {
+            return head >= Tail ? head - Tail : m_Buffer.Length - (Tail - head);
         }
 
         private int NextPowerOfTwo(int n)
@@ -65,6 +71,10 @@ namespace Framework.NetWork
             return n;
         }
 
+        /// <summary>
+        /// expand buffer, keep the m_Head, m_Tail, m_Fence unchanged
+        /// </summary>
+        /// <param name="min"></param>
         private void EnsureCapacity(int min)
         {
             if (m_Buffer == null || m_Buffer.Length < min)
@@ -78,27 +88,27 @@ namespace Framework.NetWork
 
                 // expand buffer
                 byte[] newBuf = new byte[newCapacity];
-                if (m_Head > m_Tail)
+                if (Head > Tail)
                 {
-                    System.Buffer.BlockCopy(m_Buffer, m_Tail, newBuf, m_Tail, m_Head - m_Tail);
+                    System.Buffer.BlockCopy(m_Buffer, Tail, newBuf, Tail, Head - Tail);
                     //m_Tail = m_Tail;      // no change
                     //m_Head = m_Head;      // no change
                 }
-                else if (m_Head < m_Tail)
+                else if (Head < Tail)
                 {
-                    int countToEnd = m_Buffer.Length - m_Tail;
-                    System.Buffer.BlockCopy(m_Buffer, m_Tail, newBuf, newBuf.Length - countToEnd, countToEnd);
+                    int countToEnd = m_Buffer.Length - Tail;
+                    System.Buffer.BlockCopy(m_Buffer, Tail, newBuf, newBuf.Length - countToEnd, countToEnd);
 
-                    if (m_Head > 0)
-                        System.Buffer.BlockCopy(m_Buffer, 0, newBuf, 0, m_Head);
+                    if (Head > 0)
+                        System.Buffer.BlockCopy(m_Buffer, 0, newBuf, 0, Head);
 
-                    m_Tail = newBuf.Length - countToEnd;
+                    Tail = newBuf.Length - countToEnd;
                     //m_Head = m_Head;      // no change
-                    if (m_Fence > 0)
+                    if (Fence > 0)
                     {
-                        if (m_Fence < m_Tail)
-                            throw new ArgumentException($"m_Fence{m_Fence} < m_Tail{m_Tail}");
-                        m_Fence = newBuf.Length - (m_Buffer.Length - m_Fence);
+                        if (Fence < Tail)
+                            throw new ArgumentException($"m_Fence{Fence} < m_Tail{Tail}");
+                        Fence = newBuf.Length - (m_Buffer.Length - Fence);
                     }
                 }
                 m_Buffer = newBuf;
@@ -109,24 +119,24 @@ namespace Framework.NetWork
         // get continous free capacity from head to buffer end
         private int GetContinuousFreeCapacityToEnd()
         {
-            return Math.Min(GetFreeCapacity(), m_Head >= m_Tail ? m_Buffer.Length - m_Head : 0);
+            return Math.Min(GetFreeCapacity(), Head >= Tail ? m_Buffer.Length - Head : 0);
         }
 
         // get continous free capacity from buffer start to tail
         private int GetContinuousFreeCapacityFromStart()
         {
             int count = 0;
-            if (m_Head < m_Tail)
+            if (Head < Tail)
             {
-                count = m_Tail - m_Head;
+                count = Tail - Head;
             }
-            else if (m_Head > m_Tail)
+            else if (Head > Tail)
             {
-                count = m_Tail;
+                count = Tail;
             }
             else
             {
-                count = m_Buffer.Length - m_Head;
+                count = m_Buffer.Length - Head;
             }
 
             return Math.Min(GetFreeCapacity(), count);
@@ -134,24 +144,24 @@ namespace Framework.NetWork
 
         private int GetContinuousUsedCapacity()
         {
-            return m_Head >= m_Tail ? m_Head - m_Tail : m_Buffer.Length - m_Tail;
+            return Head >= Tail ? Head - Tail : m_Buffer.Length - Tail;
         }
 
         // 获取已接收到的网络数据
-        public ref readonly byte[] FetchBufferToRead(out int offset, out int length)
+        internal ref readonly byte[] FetchBufferToRead(out int offset, out int length)
         {
-            offset = m_Tail;
+            offset = Tail;
             length = GetContinuousUsedCapacity();
             return ref m_Buffer;
         }
 
-        public void FinishRead(int length)
+        internal void FinishRead(int length)
         {
-            m_Tail = (m_Tail + length) & m_IndexMask;
+            Tail = (Tail + length) & m_IndexMask;
         }
 
         // 写入待发送的数据
-        public bool Write(byte[] data, int offset, int length)
+        internal void Write(byte[] data, int offset, int length)
         {
             if (data == null)
                 throw new ArgumentNullException("data == null");
@@ -166,24 +176,22 @@ namespace Framework.NetWork
                 EnsureCapacity(m_Buffer.Length + 1);
             }
 
-            if (m_Head + length <= m_Buffer.Length)
+            if (Head + length <= m_Buffer.Length)
             {
-                System.Buffer.BlockCopy(data, offset, m_Buffer, m_Head, length);
+                System.Buffer.BlockCopy(data, offset, m_Buffer, Head, length);
             }
             else
             {
-                int countToEnd = m_Buffer.Length - m_Head;
-                System.Buffer.BlockCopy(data, offset, m_Buffer, m_Head, countToEnd);
+                int countToEnd = m_Buffer.Length - Head;
+                System.Buffer.BlockCopy(data, offset, m_Buffer, Head, countToEnd);
                 System.Buffer.BlockCopy(data, countToEnd, m_Buffer, 0, length - countToEnd);
             }
-            m_Head = (m_Head + length) & m_IndexMask;
-
-            return true;
+            Head = (Head + length) & m_IndexMask;
         }
 
-        public bool Write(byte[] data)
+        internal void Write(byte[] data)
         {
-            return Write(data, 0, data.Length);
+            Write(data, 0, data.Length);
         }
 
         // 获取连续地、制定大小(length)的buff，用于上层写入数据
@@ -191,7 +199,7 @@ namespace Framework.NetWork
         // param: [out]offset, the position where can be written
         // param: [in]length, the length of write, expand buffer's capacity internally if necessary
         // return: true if expanding capacity; return false, otherwise
-        public bool FetchBufferToWrite(int length, out byte[] buf, out int offset)
+        internal bool FetchBufferToWrite(int length, out byte[] buf, out int offset)
         {
             bool isExpandCapacity = false;
             while (length > GetContinuousFreeCapacityToEnd() && length > GetContinuousFreeCapacityFromStart())
@@ -203,20 +211,34 @@ namespace Framework.NetWork
             int countToEnd = GetContinuousFreeCapacityToEnd();
             if(countToEnd > 0 && length > countToEnd)
             { // 尾端空间不够则插入fence
-                m_Fence = m_Head;
-                m_Head = 0;     // skip the remaining buffer, start from beginning
+                Fence = Head;
+                Head = 0;     // skip the remaining buffer, start from beginning
             }
 
-            offset = m_Head;
+            offset = Head;
             buf = m_Buffer;
             return isExpandCapacity;
         }
 
-        public void FinishWrite(int length)
+        /// <summary>
+        /// 数据写入缓存完成
+        /// 与FetchBufferToWrite对应，同一帧调用
+        /// </summary>
+        /// <param name="length"></param>
+        internal void FinishBufferWriting(int length)
+        {
+            Head = (Head + length) % m_IndexMask;
+        }
+
+        /// <summary>
+        /// 发送数据完成
+        /// </summary>
+        /// <param name="length"></param>
+        internal void FinishBufferSending(int length)
         {
             // 数据包发送完成更新m_Tail
-            m_Tail = (m_Tail + length) % m_IndexMask;
-            m_Fence = 0;        // 因网络数据包一次发送完成，所以Fence可以重置
+            Tail = (Tail + length) % m_IndexMask;
+            Fence = 0;        // 因网络数据包一次发送完成，所以Fence可以重置
         }
     }
 }
