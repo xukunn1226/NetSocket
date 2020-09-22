@@ -107,7 +107,7 @@ namespace Framework.NetWork
         // param: [out]offset, the position where can be written
         // param: [in]length, the length of write, expand capacity of buffer internally
         // return: true if expanding capacity; return false, otherwise
-        internal bool FetchDesiredBufferToWrite(out byte[] buf, out int offset, int length)
+        internal bool FetchBufferToWrite(out byte[] buf, out int offset, int length)
         {
             //int maxCount = Math.Min(GetFreeCapacity(), m_Buffer.Length - m_Head);        // 一次最多填充至尾端
             bool isExpandCapacity = false;

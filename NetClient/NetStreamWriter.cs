@@ -8,6 +8,9 @@ using System.IO;
 
 namespace Framework.NetWork
 {
+    /// <summary>
+    /// 负责网络数据发送，主线程同步接收数据，子线程异步发送数据
+    /// </summary>
     public class NetStreamWriter : NetStream
     {
         private NetRingBuffer     m_Buffer;
@@ -38,9 +41,14 @@ namespace Framework.NetWork
             m_Buffer.Write(data, 0, data.Length);
         }
 
-        public bool FetchBufferToWrite(int length, out byte[] buf, out int offset)
+        public void FetchBufferToWrite(int length, out byte[] buf, out int offset)
         {
-            return m_Buffer.FetchBufferToWrite(length, out buf, out offset);
+            m_Buffer.FetchBufferToWrite(length, out buf, out offset);
+        }
+
+        public void FinishBufferWriting(int length)
+        {
+            m_Buffer.FinishBufferWriting(length);
         }
 
         /// <summary>
