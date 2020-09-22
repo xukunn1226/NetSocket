@@ -13,21 +13,58 @@ namespace Client
     class Client
     {
         static private NetManager<string> m_NetManager;
-        
-        static void TestRef()
-        {
-            byte[] bb = new byte[3] { 2, 1, 0 };
-            ref byte[] aa = ref bb;
-            MemoryStream ms = new MemoryStream(aa, 0, 3, true, true);
-            byte[] cc = ms.GetBuffer();
-            //aa = ref bb;
-            aa[1] = 4;
 
-            bb = new byte[3] { 5, 5, 5 };
-            byte[] dd = ms.GetBuffer();
+        static async Task Main()
+        {
+            var tokenSource2 = new CancellationTokenSource();
+            CancellationToken ct = tokenSource2.Token;
+
+            var task = Task.Run(() =>
+            {
+                // Were we already canceled?
+                ct.ThrowIfCancellationRequested();
+
+                bool moreToDo = true;
+                while (moreToDo)
+                {
+                    // Poll on this property if you have to do
+                    // other cleanup before throwing.
+                    if (ct.IsCancellationRequested)
+                    {
+                        // Clean up here, then...
+                        ct.ThrowIfCancellationRequested();
+                        //break;
+                    }
+
+                    ConsoleKeyInfo key = Console.ReadKey();
+                    if(key.Key == ConsoleKey.Enter)
+                    {
+                        tokenSource2.Cancel();
+                    }
+                }
+            }, tokenSource2.Token); // Pass same token to Task.Run.
+
+            //tokenSource2.Cancel();
+
+            // Just continue on this thread, or await with try-catch:
+            try
+            {
+                await task;
+            }
+            catch (OperationCanceledException e)
+            {
+                Console.WriteLine($"{nameof(OperationCanceledException)} thrown with message: {e.Message}");
+            }
+            finally
+            {
+                tokenSource2.Dispose();
+            }
+
+            Console.ReadKey();
         }
 
-        static async Task Main(string[] args)
+
+        static async Task Main1(string[] args)
         {
             //TestRef();
 

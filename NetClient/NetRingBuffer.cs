@@ -16,9 +16,9 @@ namespace Framework.NetWork
         private byte[]          m_Buffer;
         private int             m_IndexMask;
         internal byte[]         Buffer  { get { return m_Buffer; } }
-        internal int            Head    { get; private set; }
-        internal int            Tail    { get; private set; }
-        internal int            Fence   { get; private set; }
+        internal int            Head    { get; set; }
+        internal int            Tail    { get; set; }
+        internal int            Fence   { get; set; }
 
         internal NetRingBuffer(int capacity = 8 * 1024)
         {
