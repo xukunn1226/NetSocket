@@ -48,6 +48,7 @@
     <Compile Include="Log\DiagnosticListener.cs" />
     <Compile Include="Log\ITraceListener.cs" />
     <Compile Include="Log\Trace.cs" />
+    <Compile Include="NetClientEx.cs" />
     <Compile Include="NetStream.cs" />
     <Compile Include="NetStreamReader.cs" />
     <Compile Include="NetStreamWriter.cs" />

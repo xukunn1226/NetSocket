@@ -8,17 +8,17 @@ namespace Framework.NetWork
 {
     /// <summary>
     /// 非通用ringbuffer，仅适配网络传输用
-    /// 在多线程中负责数据传递，需要保持数据稳定性，故不支持动态扩容
+    /// 在多线程中负责数据传递，因需要保持数据稳定性，故不支持动态扩容
     /// </summary>
-    public class NetRingBuffer
+    internal class NetRingBuffer
     {
         private const int       m_MinCapacity   = 1024;
         private byte[]          m_Buffer;
         private int             m_IndexMask;
-        internal byte[]         Buffer  { get { return m_Buffer; } }
-        internal int            Head    { get; set; }
-        internal int            Tail    { get; set; }
-        internal int            Fence   { get; set; }
+        internal byte[]         Buffer          { get { return m_Buffer; } }
+        internal int            Head            { get; set; }
+        internal int            Tail            { get; set; }
+        internal int            Fence           { get; set; }
 
         internal NetRingBuffer(int capacity = 8 * 1024)
         {
@@ -37,7 +37,7 @@ namespace Framework.NetWork
             m_IndexMask = m_Buffer.Length - 1;
         }
 
-        protected void Clear()
+        internal void Clear()
         {
             Head = 0;
             Tail = 0;

@@ -11,14 +11,13 @@ namespace Framework.NetWork
     /// <summary>
     /// 负责网络数据发送，主线程同步接收数据，子线程异步发送数据
     /// </summary>
-    sealed public class NetStreamWriter : NetStream
+    sealed internal class NetStreamWriter : NetStream
     {
-        private NetClient                   m_NetClient;
-        private NetRingBuffer               m_Buffer;
+        private NetClientEx                 m_NetClient;
         private NetworkStream               m_Stream;
-        private SemaphoreSlim               m_SendBufferSema;                                   // 控制是否可以消息发送的信号量
-                                                                                        // The count is decremented each time a thread enters the semaphore, and incremented each time a thread releases the semaphore
-        private bool                        m_isSendingBuffer;                                  // 发送消息IO是否进行中
+        private SemaphoreSlim               m_SendBufferSema;                       // 控制是否可以消息发送的信号量
+                                                                                    // The count is decremented each time a thread enters the semaphore, and incremented each time a thread releases the semaphore
+        private bool                        m_isSendingBuffer;                      // 发送消息IO是否进行中
         private CancellationTokenSource     m_TokenSource;
 
         struct WriteCommand
@@ -26,10 +25,9 @@ namespace Framework.NetWork
             public int Head;
             public int Fence;
         }
-        private Queue<WriteCommand> m_CommandQueue = new Queue<WriteCommand>(8);
+        private Queue<WriteCommand>         m_CommandQueue          = new Queue<WriteCommand>(8);
 
-
-        public NetStreamWriter(NetClient netClient, int capacity = 8 * 1024)
+        internal NetStreamWriter(NetClientEx netClient, int capacity = 8 * 1024)
             : base(capacity)
         {
             if (netClient == null) throw new ArgumentNullException();
@@ -37,47 +35,75 @@ namespace Framework.NetWork
             m_NetClient = netClient;
         }
 
-        public void Start(NetworkStream stream)
+        internal void Start(NetworkStream stream)
         {
             m_Stream = stream;
-            Clear();
+            m_Buffer.Clear();
 
             m_SendBufferSema?.Dispose();
             m_SendBufferSema = new SemaphoreSlim(0, 1);
-
             m_isSendingBuffer = false;
+
+            m_TokenSource?.Dispose();
             m_TokenSource = new CancellationTokenSource();
 
             // https://binary-studio.com/2015/10/23/task-cancellation-in-c-and-things-you-should-know-about-it/
             Task.Run(WriteAsync, m_TokenSource.Token);
         }
 
-        public void Write(byte[] data, int offset, int length)
+        protected override void Dispose(bool disposing)
+        {
+            if (m_Disposed)
+                return;
+
+            if (disposing)
+            {
+                // free managed resources
+            }
+
+            // free unmanaged resources
+            m_TokenSource?.Dispose();
+            m_SendBufferSema?.Dispose();
+
+            m_Disposed = true;
+        }
+
+        internal void Write(byte[] data, int offset, int length)
         {
             m_Buffer.Write(data, offset, length);
         }
 
-        public void Write(byte[] data)
+        internal void Write(byte[] data)
         {
             m_Buffer.Write(data, 0, data.Length);
         }
 
-        public void FetchBufferToWrite(int length, out byte[] buf, out int offset)
+        internal void FetchBufferToWrite(int length, out byte[] buf, out int offset)
         {
             m_Buffer.FetchBufferToWrite(length, out buf, out offset);
         }
 
-        public void FinishBufferWriting(int length)
+        internal void FinishBufferWriting(int length)
         {
             m_Buffer.FinishBufferWriting(length);
         }
 
-        public void ResetFence()
+        internal void ResetFence()
         {
             m_Buffer.ResetFence();
         }
 
-        public void Flush()
+        internal void Cancel()
+        {
+            if(m_SendBufferSema.CurrentCount == 0)
+            {
+                m_SendBufferSema.Release();
+            }
+
+            m_TokenSource.Cancel();
+        }
+
+        internal void Flush()
         {
             if (m_NetClient?.state == ConnectState.Connected &&
                 m_SendBufferSema != null &&
@@ -113,7 +139,7 @@ namespace Framework.NetWork
             }
         }
 
-        internal async Task FlushWrite()
+        private async Task FlushWrite()
         {
             try
             {

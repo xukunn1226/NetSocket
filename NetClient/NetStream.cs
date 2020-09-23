@@ -1,37 +1,24 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Threading;
 
 namespace Framework.NetWork
 {
-    abstract public class NetStream : NetRingBuffer, IDisposable
+    abstract internal class NetStream : IDisposable
     {
-        private bool m_Disposed;
+        protected bool                      m_Disposed;
+        protected NetRingBuffer             m_Buffer;
 
-        public NetStream(int capacity = 8 * 1024) : base(capacity)
-        { }
+        internal NetStream(int capacity = 8 * 1024)
+        {
+            m_Buffer = new NetRingBuffer(capacity);
+        }
 
         ~NetStream()
         {
             Dispose(false);
         }
 
-        protected virtual void Dispose(bool disposing)
-        {
-            if (m_Disposed)
-                return;
-
-            if (disposing)
-            {
-                // free managed resources
-            }
-
-            // free unmanaged resources
-
-            m_Disposed = true;
-        }
+        protected abstract void Dispose(bool disposing);
 
         public void Dispose()
         {
