@@ -10,7 +10,7 @@ namespace Framework.NetWork
     /// 非通用ringbuffer，仅适配网络传输用
     /// 在多线程中负责数据传递，需要保持数据稳定性，故不支持动态扩容
     /// </summary>
-    internal class NetRingBuffer
+    public class NetRingBuffer
     {
         private const int       m_MinCapacity   = 1024;
         private byte[]          m_Buffer;
@@ -37,7 +37,7 @@ namespace Framework.NetWork
             m_IndexMask = m_Buffer.Length - 1;
         }
 
-        internal void Clear()
+        protected void Clear()
         {
             Head = 0;
             Tail = 0;
@@ -247,6 +247,14 @@ namespace Framework.NetWork
         }
 
         /// <summary>
+        /// 撤销fence，主线程调用
+        /// </summary>
+        internal void ResetFence()
+        {
+            Fence = 0;
+        }
+
+        /// <summary>
         /// 发送数据完成，子线程调用
         /// </summary>
         /// <param name="length"></param>
@@ -254,7 +262,6 @@ namespace Framework.NetWork
         {
             // 数据包发送完成更新m_Tail
             Tail = (Tail + length) % m_IndexMask;
-            Fence = 0;        // 因网络数据包一次发送完成，所以Fence可以重置
         }
     }
 }

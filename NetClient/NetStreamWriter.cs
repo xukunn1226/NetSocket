@@ -11,7 +11,7 @@ namespace Framework.NetWork
     /// <summary>
     /// 负责网络数据发送，主线程同步接收数据，子线程异步发送数据
     /// </summary>
-    public class NetStreamWriter : NetStream
+    sealed public class NetStreamWriter : NetStream
     {
         private NetClient                   m_NetClient;
         private NetRingBuffer               m_Buffer;
@@ -30,17 +30,17 @@ namespace Framework.NetWork
 
 
         public NetStreamWriter(NetClient netClient, int capacity = 8 * 1024)
+            : base(capacity)
         {
             if (netClient == null) throw new ArgumentNullException();
 
             m_NetClient = netClient;
-            m_Buffer = new NetRingBuffer(capacity);
         }
 
         public void Start(NetworkStream stream)
         {
             m_Stream = stream;
-            m_Buffer.Clear();
+            Clear();
 
             m_SendBufferSema?.Dispose();
             m_SendBufferSema = new SemaphoreSlim(0, 1);
@@ -72,6 +72,11 @@ namespace Framework.NetWork
             m_Buffer.FinishBufferWriting(length);
         }
 
+        public void ResetFence()
+        {
+            m_Buffer.ResetFence();
+        }
+
         public void Flush()
         {
             if (m_NetClient?.state == ConnectState.Connected &&
@@ -84,7 +89,7 @@ namespace Framework.NetWork
                 m_CommandQueue.Enqueue(new WriteCommand() { Head = m_Buffer.Head, Fence = m_Buffer.Fence });
 
                 // 每次push command完重置Fence
-                m_Buffer.Fence = 0;
+                ResetFence();
 
                 m_SendBufferSema.Release();                     // Sema.CurrentCount += 1
             }

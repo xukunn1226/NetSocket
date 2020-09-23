@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Framework.NetWork
 {
-    public class NetStreamReader : NetStream
+    public class NetStreamReader// : NetStream
     {
     }
 }
