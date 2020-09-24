@@ -7,6 +7,7 @@ using System.Net.Sockets;
 using Framework.NetWork;
 using System.Threading;
 using System.IO;
+using Framework.NetWork.Log;
 
 namespace Client
 {
@@ -14,7 +15,7 @@ namespace Client
     {
         static private NetManager<string> m_NetManager;
 
-        static async Task Main()
+        static async Task Main3()
         {
             var tokenSource2 = new CancellationTokenSource();
             CancellationToken ct = tokenSource2.Token;
@@ -63,6 +64,45 @@ namespace Client
             Console.ReadKey();
         }
 
+        static NetClientEx m_Client;
+        static async Task Main(string[] args)
+        {
+            Trace.EnableConsole();
+            Console.WriteLine("Press 'F1' to connect server...");
+
+            ConsoleKeyInfo key;
+            key = Console.ReadKey();
+
+            while (m_Client == null || m_Client.state != ConnectState.Connected)
+            {
+                if (key.Key == ConsoleKey.F1)
+                {
+                    m_Client = new NetClientEx("127.0.0.1", 11000);
+                    await m_Client.Connect();
+                    if (m_Client.state == ConnectState.Connected)
+                        Console.WriteLine("Connect server...");
+                }
+            }
+
+            while (m_Client != null && m_Client.state == ConnectState.Connected)
+            {
+                Console.WriteLine("Press 'C' to close socket OR 'Enter' to send data");
+                key = Console.ReadKey();
+                if (key.Key == ConsoleKey.C)
+                {
+                    m_Client.Close();
+                    break;
+                }
+                else if(key.Key == ConsoleKey.Enter)
+                {
+                    m_Client.Send(Encoding.ASCII.GetBytes("hello world"));
+                    m_Client.Tick();
+                }
+            }
+
+            Console.WriteLine("Press any key to quit");
+            Console.ReadKey();
+        }
 
         static async Task Main1(string[] args)
         {

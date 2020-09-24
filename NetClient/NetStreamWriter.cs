@@ -10,6 +10,14 @@ namespace Framework.NetWork
 {
     /// <summary>
     /// 负责网络数据发送，主线程同步接收数据，子线程异步发送数据
+    /// 测试用例：
+    /// 1、连接服务器失败   [PASS]
+    /// 2、服务器断开连接   []
+    /// 3、客户端异常断开连接（参数错误、断电等）
+    /// 4、断线重连
+    /// 5、任何异常情况能否退出WriteAsync
+    /// 6、主动断开连接
+    /// 7、持续的发送协议时重复1-6
     /// </summary>
     sealed internal class NetStreamWriter : NetStream
     {
@@ -18,7 +26,7 @@ namespace Framework.NetWork
         private SemaphoreSlim               m_SendBufferSema;                       // 控制是否可以消息发送的信号量
                                                                                     // The count is decremented each time a thread enters the semaphore, and incremented each time a thread releases the semaphore
         private bool                        m_isSendingBuffer;                      // 发送消息IO是否进行中
-        private CancellationTokenSource     m_TokenSource;
+        private bool                        m_QuitWriting;
 
         struct WriteCommand
         {
@@ -38,17 +46,15 @@ namespace Framework.NetWork
         internal void Start(NetworkStream stream)
         {
             m_Stream = stream;
-            m_Buffer.Clear();
 
+            // setup environment
+            m_Buffer.Clear();
             m_SendBufferSema?.Dispose();
             m_SendBufferSema = new SemaphoreSlim(0, 1);
             m_isSendingBuffer = false;
+            m_QuitWriting = false;
 
-            m_TokenSource?.Dispose();
-            m_TokenSource = new CancellationTokenSource();
-
-            // https://binary-studio.com/2015/10/23/task-cancellation-in-c-and-things-you-should-know-about-it/
-            Task.Run(WriteAsync, m_TokenSource.Token);
+            Task.Run(WriteAsync);
         }
 
         protected override void Dispose(bool disposing)
@@ -62,7 +68,6 @@ namespace Framework.NetWork
             }
 
             // free unmanaged resources
-            m_TokenSource?.Dispose();
             m_SendBufferSema?.Dispose();
 
             m_Disposed = true;
@@ -88,19 +93,14 @@ namespace Framework.NetWork
             m_Buffer.FinishBufferWriting(length);
         }
 
-        internal void ResetFence()
+        internal void Close()
         {
-            m_Buffer.ResetFence();
-        }
-
-        internal void Cancel()
-        {
-            if(m_SendBufferSema.CurrentCount == 0)
+            // release semaphore, make WriteAsync jump out of the while loop
+            if (m_SendBufferSema.CurrentCount == 0)
             {
+                m_QuitWriting = true;
                 m_SendBufferSema.Release();
             }
-
-            m_TokenSource.Cancel();
         }
 
         internal void Flush()
@@ -115,7 +115,7 @@ namespace Framework.NetWork
                 m_CommandQueue.Enqueue(new WriteCommand() { Head = m_Buffer.Head, Fence = m_Buffer.Fence });
 
                 // 每次push command完重置Fence
-                ResetFence();
+                m_Buffer.ResetFence();
 
                 m_SendBufferSema.Release();                     // Sema.CurrentCount += 1
             }
@@ -128,6 +128,8 @@ namespace Framework.NetWork
                 while (m_NetClient.state == ConnectState.Connected)
                 {
                     await m_SendBufferSema.WaitAsync();         // CurrentCount==0将等待，直到Sema.CurrentCount > 0，执行完Sema.CurrentCount -= 1
+                    if (m_QuitWriting)
+                        break;
                     m_isSendingBuffer = true;
                     await FlushWrite();
                     m_isSendingBuffer = false;
@@ -143,6 +145,9 @@ namespace Framework.NetWork
         {
             try
             {
+                if (m_CommandQueue.Count == 0)
+                    return;
+
                 WriteCommand cmd = m_CommandQueue.Peek();
 
                 int length = m_Buffer.GetUsedCapacity(cmd.Head);
@@ -190,11 +195,6 @@ namespace Framework.NetWork
 
         private void RaiseException(Exception e)
         {
-            if(m_TokenSource != null)
-            {
-                m_TokenSource.Dispose();
-                m_TokenSource = null;
-            }
             m_NetClient.RaiseException(e);
         }
     }

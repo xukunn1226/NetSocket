@@ -224,11 +224,11 @@ namespace Framework.NetWork
         internal void FetchBufferToWrite(int length, out byte[] buf, out int offset)
         {
             if (length > GetContinuousFreeCapacityToEnd() && length > GetContinuousFreeCapacityFromStart())
-                throw new ArgumentOutOfRangeException($"NetRingBuffer: no space to hold {length} data");
+                throw new ArgumentOutOfRangeException($"NetRingBuffer: no space to receive data {length}");
 
             int countToEnd = GetContinuousFreeCapacityToEnd();
             if(countToEnd > 0 && length > countToEnd)
-            { // 尾端空间不够则插入fence
+            { // 需要连续空间，尾端空间不够则插入fence，从0开始
                 Fence = Head;
                 Head = 0;     // skip the remaining buffer, start from beginning
             }

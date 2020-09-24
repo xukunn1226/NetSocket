@@ -11,13 +11,13 @@ namespace Framework.NetWork
 {
     public class NetClientEx
     {
-        public delegate void onConnected();
+        public delegate void onConnected(int ret);
         public delegate void onDisconnected(int ret);
 
         public ConnectState         state { get; private set; } = ConnectState.Disconnected;
 
         private TcpClient           m_Client;
-
+        
         private string              m_Host;
         private int                 m_Port;
 
@@ -47,29 +47,25 @@ namespace Framework.NetWork
                 IPAddress ip = IPAddress.Parse(m_Host);
                 state = ConnectState.Connecting;
                 await m_Client.ConnectAsync(ip, m_Port);
-                OnConnected();
+                OnConnected(0);
 
                 m_StreamWriter.Start(m_Client.GetStream());
             }
             catch (ArgumentNullException e)
             {
-                Trace.Debug(e.ToString());
-                RaiseException(e);
+                OnConnected(-1, e);
             }
             catch (ArgumentOutOfRangeException e)
             {
-                Trace.Debug(e.ToString());
-                RaiseException(e);
+                OnConnected(-1, e);
             }
             catch (ObjectDisposedException e)
             {
-                Trace.Debug(e.ToString());
-                RaiseException(e);
+                OnConnected(-1, e);
             }
             catch (SocketException e)
             {
-                Trace.Debug(e.ToString());
-                RaiseException(e);
+                OnConnected(-1, e);
             }
         }
 
@@ -78,16 +74,29 @@ namespace Framework.NetWork
             await Connect();
         }
 
-        private void OnConnected()
+        private void OnConnected(int ret, Exception e = null)
         {
-            state = ConnectState.Connected;
-            m_ConnectedHandler?.Invoke();
+            state = ret == 0 ? ConnectState.Connected : ConnectState.Disconnected;
+            m_ConnectedHandler?.Invoke(ret);
+
+            if(e != null)
+            {
+                Trace.Debug(e.ToString());
+            }
         }
 
         internal void OnDisconnected(int ret)
         {
             state = ConnectState.Disconnected;
             m_DisconnectedHandler?.Invoke(ret);
+        }
+
+        public void Tick()
+        {
+            if (state != ConnectState.Connected)
+                return;
+
+            m_StreamWriter.Flush();
         }
 
         internal void RaiseException(Exception e)
@@ -125,7 +134,7 @@ namespace Framework.NetWork
 
             if(m_StreamWriter != null)
             {
-
+                m_StreamWriter.Close();
             }
 
             if (m_Client != null)
@@ -144,7 +153,6 @@ namespace Framework.NetWork
             try
             {
                 m_StreamWriter.Write(buf, offset, length);
-                m_StreamWriter.Flush();
             }
             catch (ArgumentNullException e)
             {
@@ -159,6 +167,16 @@ namespace Framework.NetWork
         public void Send(byte[] buf)
         {
             Send(buf, 0, buf.Length);
+        }
+
+        public void FetchBufferToWrite(int length, out byte[] buf, out int offset)
+        {
+            m_StreamWriter.FetchBufferToWrite(length, out buf, out offset);
+        }
+
+        public void FinishBufferWriting(int length)
+        {
+            m_StreamWriter.FinishBufferWriting(length);
         }
 
 
