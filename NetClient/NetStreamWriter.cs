@@ -12,11 +12,11 @@ namespace Framework.NetWork
     /// 负责网络数据发送，主线程同步接收数据，子线程异步发送数据
     /// 测试用例：
     /// 1、连接服务器失败   [PASS]
-    /// 2、关闭服务器，再发送消息   []
+    /// 2、关闭服务器，再发送消息   [PASS]
     /// 3、客户端异常断开连接（参数错误、断电等）
     /// 4、断线重连
     /// 5、任何异常情况能否退出WriteAsync
-    /// 6、主动断开连接
+    /// 6、主动断开连接    [PASS]
     /// 7、持续的发送协议时重复1-6
     /// </summary>
     sealed internal class NetStreamWriter : NetStream
@@ -93,9 +93,9 @@ namespace Framework.NetWork
             m_Buffer.FinishBufferWriting(length);
         }
 
-        internal void Close()
+        internal void Shutdown()
         {
-            // release semaphore, make WriteAsync jump out of the while loop
+            // release semaphore, make WriteAsync jump out from the while loop
             if (m_SendBufferSema.CurrentCount == 0)
             {
                 m_QuitWriting = true;

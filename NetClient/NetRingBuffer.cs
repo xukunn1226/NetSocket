@@ -14,11 +14,12 @@ namespace Framework.NetWork
     {
         private const int       m_MinCapacity   = 1024;
         private byte[]          m_Buffer;
-        private int             m_IndexMask;
+
         internal byte[]         Buffer          { get { return m_Buffer; } }
         internal int            Head            { get; set; }
         internal int            Tail            { get; set; }
         internal int            Fence           { get; set; }
+        internal int            IndexMask       { get; private set; }
 
         internal NetRingBuffer(int capacity = 8 * 1024)
         {
@@ -34,7 +35,7 @@ namespace Framework.NetWork
             newCapacity = NextPowerOfTwo(newCapacity);
 
             m_Buffer = new byte[newCapacity];
-            m_IndexMask = m_Buffer.Length - 1;
+            IndexMask = m_Buffer.Length - 1;
         }
 
         internal void Clear()
@@ -51,7 +52,7 @@ namespace Framework.NetWork
 
         internal bool IsFull()
         {
-            return ((Head + 1) & m_IndexMask) == Tail;
+            return ((Head + 1) & IndexMask) == Tail;
         }
 
         internal int GetMaxCapacity()
@@ -132,7 +133,7 @@ namespace Framework.NetWork
         //}
 
         // get continous free capacity from head to buffer end
-        private int GetContinuousFreeCapacityToEnd()
+        internal int GetContinuousFreeCapacityToEnd()
         {
             return Math.Min(GetFreeCapacity(), Head >= Tail ? m_Buffer.Length - Head : 0);
         }
@@ -161,7 +162,7 @@ namespace Framework.NetWork
         {
             return Head >= Tail ? Head - Tail : m_Buffer.Length - Tail;
         }
-
+        
         // 获取已接收到的网络数据
         internal ref readonly byte[] FetchBufferToRead(out int offset, out int length)
         {
@@ -172,7 +173,7 @@ namespace Framework.NetWork
 
         internal void FinishRead(int length)
         {
-            Tail = (Tail + length) & m_IndexMask;
+            Tail = (Tail + length) & IndexMask;
         }
 
         /// <summary>
@@ -203,7 +204,7 @@ namespace Framework.NetWork
                 System.Buffer.BlockCopy(data, offset, m_Buffer, Head, countToEnd);
                 System.Buffer.BlockCopy(data, countToEnd, m_Buffer, 0, length - countToEnd);
             }
-            Head = (Head + length) & m_IndexMask;
+            Head = (Head + length) & IndexMask;
         }
 
         /// <summary>
@@ -243,7 +244,7 @@ namespace Framework.NetWork
         /// <param name="length"></param>
         internal void FinishBufferWriting(int length)
         {
-            Head = (Head + length) % m_IndexMask;
+            Head = (Head + length) % IndexMask;
         }
 
         /// <summary>
@@ -261,7 +262,7 @@ namespace Framework.NetWork
         internal void FinishBufferSending(int length)
         {
             // 数据包发送完成更新m_Tail
-            Tail = (Tail + length) % m_IndexMask;
+            Tail = (Tail + length) % IndexMask;
         }
     }
 }

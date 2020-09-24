@@ -25,6 +25,7 @@ namespace Framework.NetWork
         private onDisconnected      m_DisconnectedHandler;
 
         private NetStreamWriter     m_StreamWriter;
+        private NetStreamReader     m_StreamReader;
 
         public NetClientEx(string host, int port, onConnected connectionHandler = null, onDisconnected disconnectedHandler = null)
         {
@@ -32,6 +33,7 @@ namespace Framework.NetWork
             m_DisconnectedHandler = disconnectedHandler;
 
             m_StreamWriter = new NetStreamWriter(this, 4 * 1024);
+            m_StreamReader = new NetStreamReader(this, 8 * 1024);
 
             m_Host = host;
             m_Port = port;
@@ -50,6 +52,7 @@ namespace Framework.NetWork
                 OnConnected(0);
 
                 m_StreamWriter.Start(m_Client.GetStream());
+                m_StreamReader.Start(m_Client.GetStream());
             }
             catch (ArgumentNullException e)
             {
@@ -132,10 +135,7 @@ namespace Framework.NetWork
             //    m_SendBufferSema = null;
             //}
 
-            if(m_StreamWriter != null)
-            {
-                m_StreamWriter.Close();
-            }
+            
 
             if (m_Client != null)
             {
@@ -145,6 +145,11 @@ namespace Framework.NetWork
                 m_Client = null;
 
                 OnDisconnected(0);
+            }
+
+            if (m_StreamWriter != null)
+            {
+                m_StreamWriter.Shutdown();
             }
         }
 
@@ -177,6 +182,16 @@ namespace Framework.NetWork
         public void FinishBufferWriting(int length)
         {
             m_StreamWriter.FinishBufferWriting(length);
+        }
+
+        public ref readonly byte[] FetchBufferToRead(out int offset, out int length)
+        {
+            return ref m_StreamReader.FetchBufferToRead(out offset, out length);
+        }
+
+        public void FinishRead(int length)
+        {
+            m_StreamReader.FinishRead(length);
         }
 
 
