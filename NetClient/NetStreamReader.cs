@@ -7,11 +7,10 @@ namespace Framework.NetWork
 {
     sealed internal class NetStreamReader : NetStream
     {
-        private NetClientEx         m_NetClient;
+        private NetClient         m_NetClient;
         private NetworkStream       m_Stream;
-        private int                 m_ReceiveByte;
 
-        internal NetStreamReader(NetClientEx netClient, int capacity = 8 * 1024)
+        internal NetStreamReader(NetClient netClient, int capacity = 8 * 1024)
             : base(capacity)
         {
             if (netClient == null) throw new ArgumentNullException();
@@ -64,10 +63,10 @@ namespace Framework.NetWork
                     if (freeCount == 0)
                         throw new ArgumentOutOfRangeException("ReadAsync: buff is full");
 
-                    m_ReceiveByte = await m_Stream.ReadAsync(m_Buffer.Buffer, m_Buffer.Head, freeCount);
-                    m_Buffer.Head = (m_Buffer.Head + m_ReceiveByte) & m_Buffer.IndexMask;
+                    int receiveByte = await m_Stream.ReadAsync(m_Buffer.Buffer, m_Buffer.Head, freeCount);
+                    m_Buffer.Head = (m_Buffer.Head + receiveByte) & m_Buffer.IndexMask;
 
-                    if (m_ReceiveByte <= 0)              // 连接中断
+                    if (receiveByte <= 0)              // 连接中断
                     {
                         RaiseException(new Exception("socket disconnected"));
                     }

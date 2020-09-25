@@ -64,7 +64,7 @@ namespace Client
             Console.ReadKey();
         }
 
-        static NetClientEx m_Client;
+        static NetClient m_Client;
         static async Task Main(string[] args)
         {
             Trace.EnableConsole();
@@ -77,7 +77,7 @@ namespace Client
             {
                 if (key.Key == ConsoleKey.F1)
                 {
-                    m_Client = new NetClientEx("127.0.0.1", 11000);
+                    m_Client = new NetClient("127.0.0.1", 11000);
                     await m_Client.Connect();
                     if (m_Client.state == ConnectState.Connected)
                         Console.WriteLine("Connect server...");

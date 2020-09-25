@@ -1,12 +1,8 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using System;
+﻿using System;
 using System.Threading.Tasks;
 using System.Net.Sockets;
 using System.Net;
-using System.Threading;
 using Framework.NetWork.Log;
-using System.Globalization;
 
 namespace Framework.NetWork
 {
@@ -17,40 +13,40 @@ namespace Framework.NetWork
         Connected,
     }
 
+    /// <summary>
+    /// 测试用例：
+    /// 1、服务器连接不上
+    /// 2、连接中突然被断开
+    /// 3、被动断线导致重连
+    /// 4、主动断开连接
+    /// </summary>
     public class NetClient
     {
-        public delegate void        onConnected();
-        public delegate void        onDisconnected(int ret);
+        public delegate void onConnected(int ret);
+        public delegate void onDisconnected(int ret);
 
-        
-        private ConnectState        m_State = ConnectState.Disconnected;
-        public ConnectState         state { get { return m_State; } }
+        public ConnectState         state { get; private set; } = ConnectState.Disconnected;
 
         private TcpClient           m_Client;
-
+        
         private string              m_Host;
         private int                 m_Port;
 
         private onConnected         m_ConnectedHandler;
         private onDisconnected      m_DisconnectedHandler;
 
-        private NetStreamBuffer     m_SendBuffer;                                                   // 消息发送缓存池
-        private NetStreamBuffer     m_ReceiveBuffer;                                                // 消息接收缓存池
+        private NetStreamWriter     m_StreamWriter;
+        private NetStreamReader     m_StreamReader;
 
-        private SemaphoreSlim       m_SendBufferSema;                                               // 控制是否可以消息发送的信号量
-                                                                                                    // The count is decremented each time a thread enters the semaphore, and incremented each time a thread releases the semaphore
-        private bool                m_isSendingBuffer;                                              // 发送消息IO是否进行中
-        private bool                m_QuitWriteOp;
-
-        private int                 m_ReceiveByte;
+        private bool                m_HandleException;
 
         public NetClient(string host, int port, onConnected connectionHandler = null, onDisconnected disconnectedHandler = null)
         {
             m_ConnectedHandler = connectionHandler;
             m_DisconnectedHandler = disconnectedHandler;
 
-            m_SendBuffer = new NetStreamBuffer(this, 4 * 1024);
-            m_ReceiveBuffer = new NetStreamBuffer(this, 8 * 1024);
+            m_StreamWriter = new NetStreamWriter(this, 4 * 1024);
+            m_StreamReader = new NetStreamReader(this, 8 * 1024);
 
             m_Host = host;
             m_Port = port;
@@ -60,142 +56,106 @@ namespace Framework.NetWork
         {
             m_Client = new TcpClient();
             m_Client.NoDelay = true;
+            //m_Client.SendTimeout = 5000;
+            m_HandleException = false;
 
             try
             {
                 IPAddress ip = IPAddress.Parse(m_Host);
-                m_State = ConnectState.Connecting;
+                state = ConnectState.Connecting;
                 await m_Client.ConnectAsync(ip, m_Port);
-                OnConnected();
+                OnConnected(0);
 
-                // setup environment for sending & receiving data
-                m_SendBufferSema = new SemaphoreSlim(0, 1);
-                m_isSendingBuffer = false;
-                m_QuitWriteOp = false;
-
-                m_SendBuffer.SetStream(m_Client.GetStream());
-                m_ReceiveBuffer.SetStream(m_Client.GetStream());
-
-                WriteAsync();
-                ReceiveAsync();
+                m_StreamWriter.Start(m_Client.GetStream());
+                m_StreamReader.Start(m_Client.GetStream());
             }
-            catch(ArgumentNullException e)
+            catch (ArgumentNullException e)
             {
-                Trace.Debug(e.ToString());
-                RaiseException(e);
+                OnConnected(-1, e);
             }
-            catch(ArgumentOutOfRangeException e)
+            catch (ArgumentOutOfRangeException e)
             {
-                Trace.Debug(e.ToString());
-                RaiseException(e);
+                OnConnected(-1, e);
             }
-            catch(ObjectDisposedException e)
+            catch (ObjectDisposedException e)
             {
-                Trace.Debug(e.ToString());
-                RaiseException(e);
+                OnConnected(-1, e);
             }
-            catch(SocketException e)
+            catch (SocketException e)
             {
-                Trace.Debug(e.ToString());
-                RaiseException(e);
+                OnConnected(-1, e);
             }
         }
 
         async public Task Reconnect()
         {
+            if (state == ConnectState.Connected || state == ConnectState.Connecting)
+                throw new InvalidOperationException("连接中，不能执行重连操作");
             await Connect();
         }
 
-        private void OnConnected()
+        private void OnConnected(int ret, Exception e = null)
         {
-            m_State = ConnectState.Connected;
-            m_ConnectedHandler?.Invoke();
-        }
+            state = ret == 0 ? ConnectState.Connected : ConnectState.Disconnected;
+            m_ConnectedHandler?.Invoke(ret);
 
-        internal void OnDisconnected(int ret)
-        {
-            m_State = ConnectState.Disconnected;
-            m_DisconnectedHandler?.Invoke(ret);
-        }
-
-        internal void RaiseException(Exception e)
-        {
-            //Trace.Debug(e.ToString());
-            InternalClose();
-        }
-
-        public void Close()
-        {
-            try
-            {
-                InternalClose();                
-            }
-            catch(Exception e)
+            if(e != null)
             {
                 Trace.Debug(e.ToString());
             }
         }
 
-        private void InternalClose()
+        private void OnDisconnected(int ret)
         {
-            if (m_SendBufferSema != null)
-            {
-                // release semaphore, make WriteAsync jump out of the while loop
-                if (m_SendBufferSema.CurrentCount == 0)
-                {
-                    m_QuitWriteOp = true;                       // trigger quitting WriteAsync loop
-                    m_SendBufferSema.Release();
-                }
+            state = ConnectState.Disconnected;
+            m_DisconnectedHandler?.Invoke(ret);
+        }
 
-                m_SendBufferSema.Dispose();
-                m_SendBufferSema = null;
+        public void Tick()
+        {
+            if (state == ConnectState.Connected)
+            {
+                m_StreamWriter.Flush();
             }
 
+            HandleException();
+        }
+
+        public void Close()
+        {
+            m_HandleException = true;
+        }
+
+        internal void RaiseException(Exception e)
+        {
+            Trace.Debug(e.ToString());
+            m_HandleException = true;
+        }
+
+        private void HandleException()
+        {
+            if (m_HandleException)
+            {
+                m_HandleException = false;
+                InternalClose();
+            }
+        }
+
+        private void InternalClose()
+        {
             if (m_Client != null)
             {
-                if(m_Client.Connected)                          // 当远端主动断开网络时，NetworkStream呈已关闭状态
+                if (m_Client.Connected)                          // 当远端主动断开网络时，NetworkStream呈已关闭状态
                     m_Client.GetStream().Close();
                 m_Client.Close();
                 m_Client = null;
 
                 OnDisconnected(0);
             }
-        }
 
-        public void FlushWrite()
-        {
-            if (m_State == ConnectState.Connected && 
-                m_SendBufferSema != null &&
-                m_SendBufferSema.CurrentCount == 0 &&           // The number of remaining threads that can enter the semaphore
-                !m_isSendingBuffer &&                           // 上次消息已发送完成
-                !m_SendBuffer.IsEmpty())                        // 已缓存一定的待发送消息
+            if (m_StreamWriter != null)
             {
-                // cache the pending sending data
-                //head = ...;
-                //tail = ...;
-                //fence = ...;
-
-                m_SendBufferSema.Release();                     // Sema.CurrentCount += 1
-            }
-        }
-
-        private async void WriteAsync()
-        {
-            try
-            {
-                while(m_State == ConnectState.Connected)
-                {
-                    await m_SendBufferSema.WaitAsync();         // CurrentCount==0将等待，直到Sema.CurrentCount > 0，执行完Sema.CurrentCount -= 1
-                    if (m_QuitWriteOp)
-                        break;
-                    m_isSendingBuffer = true;
-                    await m_SendBuffer.FlushWrite();
-                    m_isSendingBuffer = false;
-                }
-            }
-            catch(SocketException e)
-            {
-                RaiseException(e);
+                m_StreamWriter.Shutdown();
             }
         }
 
@@ -203,13 +163,13 @@ namespace Framework.NetWork
         {
             try
             {
-                m_SendBuffer.Write(buf, offset, length);
+                m_StreamWriter.Write(buf, offset, length);
             }
-            catch(ArgumentNullException e)
+            catch (ArgumentNullException e)
             {
                 RaiseException(e);
             }
-            catch(ArgumentOutOfRangeException e)
+            catch (ArgumentOutOfRangeException e)
             {
                 RaiseException(e);
             }
@@ -220,34 +180,26 @@ namespace Framework.NetWork
             Send(buf, 0, buf.Length);
         }
 
-        public ref readonly byte[] BeginRead(out int offset, out int length)
+        public void RequestBufferToWrite(int length, out byte[] buf, out int offset)
         {
-            return ref m_ReceiveBuffer.FetchBufferToRead(out offset, out length);
+            m_StreamWriter.RequestBufferToWrite(length, out buf, out offset);
         }
 
-        public void EndRead(int length)
+        public void FinishBufferWriting(int length)
         {
-            m_ReceiveBuffer.FinishRead(length);
+            m_StreamWriter.FinishBufferWriting(length);
         }
 
-        private async void ReceiveAsync()
+        public ref readonly byte[] FetchBufferToRead(out int offset, out int length)
         {
-            try
-            {
-                while(m_State == ConnectState.Connected)
-                {
-                    m_ReceiveByte = await m_ReceiveBuffer.ReadAsync();
-                    if(m_ReceiveByte <= 0)              // 连接中断
-                    {
-                        RaiseException(new Exception("socket disconnected"));
-                    }
-                }
-            }
-            catch(SocketException e)
-            {
-                RaiseException(e);
-            }
+            return ref m_StreamReader.FetchBufferToRead(out offset, out length);
         }
+
+        public void FinishRead(int length)
+        {
+            m_StreamReader.FinishRead(length);
+        }
+
 
         // https://docs.microsoft.com/zh-cn/dotnet/api/system.net.sockets.socket.connected?redirectedfrom=MSDN&view=netcore-3.1#System_Net_Sockets_Socket_Connected
         public bool IsConnected()

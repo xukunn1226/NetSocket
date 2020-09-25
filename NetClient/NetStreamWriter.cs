@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Net.Sockets;
@@ -22,7 +21,7 @@ namespace Framework.NetWork
     /// </summary>
     sealed internal class NetStreamWriter : NetStream
     {
-        private NetClientEx                 m_NetClient;
+        private NetClient                 m_NetClient;
         private NetworkStream               m_Stream;
         private SemaphoreSlim               m_SendBufferSema;                       // 控制是否可以消息发送的信号量
                                                                                     // The count is decremented each time a thread enters the semaphore, and incremented each time a thread releases the semaphore
@@ -35,7 +34,7 @@ namespace Framework.NetWork
         }
         private Queue<WriteCommand>         m_CommandQueue          = new Queue<WriteCommand>(8);
 
-        internal NetStreamWriter(NetClientEx netClient, int capacity = 8 * 1024)
+        internal NetStreamWriter(NetClient netClient, int capacity = 8 * 1024)
             : base(capacity)
         {
             if (netClient == null) throw new ArgumentNullException();

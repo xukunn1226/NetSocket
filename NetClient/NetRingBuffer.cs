@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Framework.NetWork
 {
@@ -141,13 +137,13 @@ namespace Framework.NetWork
         //}
 
         // get continous free capacity from head to buffer end
-        internal int GetContinuousFreeCapacityToEnd()
+        private int GetContinuousUnusedCapacityToEnd()
         {
             return Math.Min(GetUnusedCapacity(), Head >= Tail ? m_Buffer.Length - Head : 0);
         }
 
         // get continous free capacity from buffer start to tail
-        internal int GetContinuousFreeCapacityFromStart()
+        private int GetContinuousUnusedCapacityFromStart()
         {
             int count = 0;
             if (Head < Tail)
@@ -168,9 +164,9 @@ namespace Framework.NetWork
 
         internal int GetContinuousUnusedCapacity()
         {
-            int count = GetContinuousFreeCapacityToEnd();
+            int count = GetContinuousUnusedCapacityToEnd();
             if (count == 0)
-                count = GetContinuousFreeCapacityFromStart();
+                count = GetContinuousUnusedCapacityFromStart();
             return count;
         }
 
@@ -240,14 +236,14 @@ namespace Framework.NetWork
         /// <param name="offset">the position where can be written</param>
         internal void RequestBufferToWrite(int length, out byte[] buf, out int offset)
         {
-            if (length > GetContinuousFreeCapacityToEnd() && length > GetContinuousFreeCapacityFromStart())
+            if (length > GetContinuousUnusedCapacityToEnd() && length > GetContinuousUnusedCapacityFromStart())
                 throw new ArgumentOutOfRangeException($"NetRingBuffer: no space to receive data {length}");
 
-            int countToEnd = GetContinuousFreeCapacityToEnd();
+            int countToEnd = GetContinuousUnusedCapacityToEnd();
             if(countToEnd > 0 && length > countToEnd)
-            { // 需要连续空间，尾端空间不够则插入fence，从0开始
+            { // need consecutive space, so skip the remaining buffer, start from beginning
                 Fence = Head;
-                Head = 0;     // skip the remaining buffer, start from beginning
+                Head = 0;
             }
 
             offset = Head;
