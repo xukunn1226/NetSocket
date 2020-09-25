@@ -91,17 +91,43 @@ namespace Client
                 if (key.Key == ConsoleKey.C)
                 {
                     m_Client.Close();
+                    m_Client.Tick();
                     break;
                 }
                 else if(key.Key == ConsoleKey.Enter)
                 {
-                    m_Client.Send(Encoding.ASCII.GetBytes("hello world"));
-                    m_Client.Tick();
+                    //m_Client.Send(Encoding.ASCII.GetBytes("hello world"));
+                    //m_Client.Tick();
+
+                    await AutoSendingEx();
+                    break;
                 }
             }
 
             Console.WriteLine("Press any key to quit");
             Console.ReadKey();
+        }
+
+        static async Task AutoSendingEx()
+        {
+            int index = 0;
+            while (true && m_Client.state == ConnectState.Connected)
+            {
+                string data = "Hello world..." + index++;
+                Console.WriteLine("\n Sending...:" + data);
+                m_Client.Send(Encoding.ASCII.GetBytes(data));
+                if(index % 3 == 0)
+                    m_Client.Tick();
+
+                if (index == 300)
+                {
+                    m_Client.Close();
+                    m_Client.Tick();
+                    break;
+                }
+
+                await Task.Delay(10);
+            }
         }
 
         static async Task Main1(string[] args)

@@ -60,7 +60,13 @@ namespace Framework.NetWork
             {
                 while (m_NetClient.state == ConnectState.Connected)
                 {
-                    m_ReceiveByte = await ReadAsync();
+                    int freeCount = m_Buffer.GetContinuousUnusedCapacity();             // 填充连续的空闲空间                
+                    if (freeCount == 0)
+                        throw new ArgumentOutOfRangeException("ReadAsync: buff is full");
+
+                    m_ReceiveByte = await m_Stream.ReadAsync(m_Buffer.Buffer, m_Buffer.Head, freeCount);
+                    m_Buffer.Head = (m_Buffer.Head + m_ReceiveByte) & m_Buffer.IndexMask;
+
                     if (m_ReceiveByte <= 0)              // 连接中断
                     {
                         RaiseException(new Exception("socket disconnected"));
@@ -71,41 +77,24 @@ namespace Framework.NetWork
             {
                 RaiseException(e);
             }
-        }
-
-        /// <summary>
-        /// 异步接收消息数据
-        /// </summary>
-        /// <returns>返回接收到的字节数</returns>
-        internal async Task<int> ReadAsync()
-        {
-            try
-            {
-                if (!m_Stream.CanRead)
-                {
-                    return 0;
-                }
-
-                int maxCount = m_Buffer.GetContinuousFreeCapacityToEnd();        // 获得连续的空闲buf
-
-                int count = await m_Stream.ReadAsync(m_Buffer.Buffer, m_Buffer.Head, maxCount);
-                m_Buffer.Head = (m_Buffer.Head + count) & m_Buffer.IndexMask;
-                return count;
-            }
             catch (ObjectDisposedException e)
             {
                 //Trace.Error(e.ToString());          // The NetworkStream is closed
-                return 0;
+                RaiseException(e);
             }
             catch (InvalidOperationException e)
             {
                 //Trace.Error(e.ToString());          // The NetworkStream does not support reading
-                return 0;
+                RaiseException(e);
             }
             catch (IOException e)
             {
                 //Trace.Error(e.ToString());
-                return 0;
+                RaiseException(e);
+            }
+            catch (ArgumentOutOfRangeException e)
+            {
+                RaiseException(e);
             }
         }
 

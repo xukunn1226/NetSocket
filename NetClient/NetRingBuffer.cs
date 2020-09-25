@@ -55,17 +55,25 @@ namespace Framework.NetWork
             return ((Head + 1) & IndexMask) == Tail;
         }
 
-        internal int GetMaxCapacity()
+        private int GetMaxCapacity()
         {
             return m_Buffer.Length - 1;
         }
 
-        internal int GetFreeCapacity()
+        /// <summary>
+        /// 获取空闲空间大小，不考虑连续性
+        /// </summary>
+        /// <returns></returns>
+        private int GetUnusedCapacity()
         {
             return GetMaxCapacity() - GetUsedCapacity();
         }
 
-        internal int GetUsedCapacity()
+        /// <summary>
+        /// 获取使用中的空间大小，不考虑连续性
+        /// </summary>
+        /// <returns></returns>
+        private int GetUsedCapacity()
         {
             return Head >= Tail ? Head - Tail : m_Buffer.Length - (Tail - Head);
         }
@@ -135,11 +143,11 @@ namespace Framework.NetWork
         // get continous free capacity from head to buffer end
         internal int GetContinuousFreeCapacityToEnd()
         {
-            return Math.Min(GetFreeCapacity(), Head >= Tail ? m_Buffer.Length - Head : 0);
+            return Math.Min(GetUnusedCapacity(), Head >= Tail ? m_Buffer.Length - Head : 0);
         }
 
         // get continous free capacity from buffer start to tail
-        private int GetContinuousFreeCapacityFromStart()
+        internal int GetContinuousFreeCapacityFromStart()
         {
             int count = 0;
             if (Head < Tail)
@@ -155,7 +163,15 @@ namespace Framework.NetWork
                 count = m_Buffer.Length - Head;
             }
 
-            return Math.Min(GetFreeCapacity(), count);
+            return Math.Min(GetUnusedCapacity(), count);
+        }
+
+        internal int GetContinuousUnusedCapacity()
+        {
+            int count = GetContinuousFreeCapacityToEnd();
+            if (count == 0)
+                count = GetContinuousFreeCapacityFromStart();
+            return count;
         }
 
         private int GetContinuousUsedCapacity()
@@ -191,7 +207,7 @@ namespace Framework.NetWork
             if (offset + length > data.Length)
                 throw new ArgumentOutOfRangeException("offset + length > data.Length");
 
-            if (length > GetFreeCapacity())
+            if (length > GetUnusedCapacity())
                 throw new System.ArgumentOutOfRangeException("NetRingBuffer is FULL, can't write anymore");
             
             if (Head + length <= m_Buffer.Length)
@@ -222,7 +238,7 @@ namespace Framework.NetWork
         /// <param name="length">the length of write, expand buffer's capacity internally if necessary</param>
         /// <param name="buf">buffer to write</param>
         /// <param name="offset">the position where can be written</param>
-        internal void FetchBufferToWrite(int length, out byte[] buf, out int offset)
+        internal void RequestBufferToWrite(int length, out byte[] buf, out int offset)
         {
             if (length > GetContinuousFreeCapacityToEnd() && length > GetContinuousFreeCapacityFromStart())
                 throw new ArgumentOutOfRangeException($"NetRingBuffer: no space to receive data {length}");
@@ -244,7 +260,7 @@ namespace Framework.NetWork
         /// <param name="length"></param>
         internal void FinishBufferWriting(int length)
         {
-            Head = (Head + length) % IndexMask;
+            Head = (Head + length) & IndexMask;
         }
 
         /// <summary>
@@ -262,7 +278,7 @@ namespace Framework.NetWork
         internal void FinishBufferSending(int length)
         {
             // 数据包发送完成更新m_Tail
-            Tail = (Tail + length) % IndexMask;
+            Tail = (Tail + length) & IndexMask;
         }
     }
 }

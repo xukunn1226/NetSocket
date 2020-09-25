@@ -11,13 +11,14 @@ namespace Framework.NetWork
     /// <summary>
     /// 负责网络数据发送，主线程同步接收数据，子线程异步发送数据
     /// 测试用例：
-    /// 1、连接服务器失败   [PASS]
+    /// 1、连接服务器失败       [PASS]
+    /// 6、主动断开连接         [PASS]
     /// 2、关闭服务器，再发送消息   [PASS]
     /// 3、客户端异常断开连接（参数错误、断电等）
     /// 4、断线重连
-    /// 5、任何异常情况能否退出WriteAsync
-    /// 6、主动断开连接    [PASS]
+    /// 5、任何异常情况能否退出WriteAsync    
     /// 7、持续的发送协议时重复1-6
+    /// 8、测试RequestBufferToWrite
     /// </summary>
     sealed internal class NetStreamWriter : NetStream
     {
@@ -26,7 +27,6 @@ namespace Framework.NetWork
         private SemaphoreSlim               m_SendBufferSema;                       // 控制是否可以消息发送的信号量
                                                                                     // The count is decremented each time a thread enters the semaphore, and incremented each time a thread releases the semaphore
         private bool                        m_isSendingBuffer;                      // 发送消息IO是否进行中
-        private bool                        m_QuitWriting;
 
         struct WriteCommand
         {
@@ -52,7 +52,6 @@ namespace Framework.NetWork
             m_SendBufferSema?.Dispose();
             m_SendBufferSema = new SemaphoreSlim(0, 1);
             m_isSendingBuffer = false;
-            m_QuitWriting = false;
 
             Task.Run(WriteAsync);
         }
@@ -83,24 +82,49 @@ namespace Framework.NetWork
             m_Buffer.Write(data, 0, data.Length);
         }
 
-        internal void FetchBufferToWrite(int length, out byte[] buf, out int offset)
+        /// <summary>
+        /// 请求指定长度（length）的连续空间
+        /// </summary>
+        /// <param name="length"></param>
+        /// <param name="buf"></param>
+        /// <param name="offset"></param>
+        /// <returns></returns>
+        internal bool RequestBufferToWrite(int length, out byte[] buf, out int offset)
         {
-            m_Buffer.FetchBufferToWrite(length, out buf, out offset);
+            try
+            {
+                m_Buffer.RequestBufferToWrite(length, out buf, out offset);
+                return true;
+            }
+            catch(ArgumentOutOfRangeException e)
+            {
+                buf = null;
+                offset = 0;
+                return false;
+            }
         }
 
+        /// <summary>
+        /// 通知stream写入完成
+        /// </summary>
+        /// <param name="length"></param>
         internal void FinishBufferWriting(int length)
         {
             m_Buffer.FinishBufferWriting(length);
         }
 
+        /// <summary>
+        /// 中止数据发送(WriteAsync)
+        /// </summary>
         internal void Shutdown()
         {
             // release semaphore, make WriteAsync jump out from the while loop
-            if (m_SendBufferSema.CurrentCount == 0)
+            if (m_SendBufferSema?.CurrentCount == 0)
             {
-                m_QuitWriting = true;
                 m_SendBufferSema.Release();
             }
+            m_SendBufferSema?.Dispose();
+            m_SendBufferSema = null;
         }
 
         internal void Flush()
@@ -128,46 +152,33 @@ namespace Framework.NetWork
                 while (m_NetClient.state == ConnectState.Connected)
                 {
                     await m_SendBufferSema.WaitAsync();         // CurrentCount==0将等待，直到Sema.CurrentCount > 0，执行完Sema.CurrentCount -= 1
-                    if (m_QuitWriting)
-                        break;
+
                     m_isSendingBuffer = true;
-                    await FlushWrite();
+                    if(m_CommandQueue.Count > 0)
+                    {
+                        WriteCommand cmd = m_CommandQueue.Peek();
+
+                        int length = m_Buffer.GetUsedCapacity(cmd.Head);
+                        if (cmd.Head > m_Buffer.Tail)
+                        {
+                            await m_Stream.WriteAsync(m_Buffer.Buffer, m_Buffer.Tail, length);
+                        }
+                        else
+                        {
+                            if (cmd.Fence > 0)
+                                await m_Stream.WriteAsync(m_Buffer.Buffer, m_Buffer.Tail, cmd.Fence - m_Buffer.Tail);
+                            else
+                                await m_Stream.WriteAsync(m_Buffer.Buffer, m_Buffer.Tail, m_Buffer.Buffer.Length - m_Buffer.Tail);
+
+                            if (cmd.Head > 0)
+                                await m_Stream.WriteAsync(m_Buffer.Buffer, 0, cmd.Head);
+                        }
+
+                        m_Buffer.FinishBufferSending(length);        // 数据发送完成，更新Tail
+                        m_CommandQueue.Dequeue();
+                    }
                     m_isSendingBuffer = false;
                 }
-            }
-            catch (SocketException e)
-            {
-                RaiseException(e);
-            }
-        }
-
-        private async Task FlushWrite()
-        {
-            try
-            {
-                if (m_CommandQueue.Count == 0)
-                    return;
-
-                WriteCommand cmd = m_CommandQueue.Peek();
-
-                int length = m_Buffer.GetUsedCapacity(cmd.Head);
-                if (cmd.Head > m_Buffer.Tail)
-                {
-                    await m_Stream.WriteAsync(m_Buffer.Buffer, m_Buffer.Tail, length);
-                }
-                else
-                {
-                    if (cmd.Fence > 0)
-                        await m_Stream.WriteAsync(m_Buffer.Buffer, m_Buffer.Tail, cmd.Fence - m_Buffer.Tail);
-                    else
-                        await m_Stream.WriteAsync(m_Buffer.Buffer, m_Buffer.Tail, m_Buffer.Buffer.Length - m_Buffer.Tail);
-
-                    if (cmd.Head > 0)
-                        await m_Stream.WriteAsync(m_Buffer.Buffer, 0, cmd.Head);
-                }
-
-                m_Buffer.FinishBufferSending(length);        // 数据发送完成，更新Tail
-                m_CommandQueue.Dequeue();
             }
             catch (ObjectDisposedException e)
             {
@@ -188,6 +199,10 @@ namespace Framework.NetWork
                 RaiseException(e);
             }
             catch (IOException e)
+            {
+                RaiseException(e);
+            }
+            catch (SocketException e)
             {
                 RaiseException(e);
             }

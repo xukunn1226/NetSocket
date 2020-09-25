@@ -9,6 +9,13 @@ using Framework.NetWork.Log;
 
 namespace Framework.NetWork
 {
+    /// <summary>
+    /// 测试用例：
+    /// 1、服务器连接不上
+    /// 2、连接中突然被断开
+    /// 3、被动断线导致重连
+    /// 4、主动断开连接
+    /// </summary>
     public class NetClientEx
     {
         public delegate void onConnected(int ret);
@@ -27,6 +34,8 @@ namespace Framework.NetWork
         private NetStreamWriter     m_StreamWriter;
         private NetStreamReader     m_StreamReader;
 
+        private bool                m_HandleException;
+
         public NetClientEx(string host, int port, onConnected connectionHandler = null, onDisconnected disconnectedHandler = null)
         {
             m_ConnectedHandler = connectionHandler;
@@ -43,6 +52,8 @@ namespace Framework.NetWork
         {
             m_Client = new TcpClient();
             m_Client.NoDelay = true;
+            //m_Client.SendTimeout = 5000;
+            m_HandleException = false;
 
             try
             {
@@ -51,7 +62,7 @@ namespace Framework.NetWork
                 await m_Client.ConnectAsync(ip, m_Port);
                 OnConnected(0);
 
-                m_StreamWriter.Start(m_Client.GetStream());
+                //m_StreamWriter.Start(m_Client.GetStream());
                 m_StreamReader.Start(m_Client.GetStream());
             }
             catch (ArgumentNullException e)
@@ -74,6 +85,8 @@ namespace Framework.NetWork
 
         async public Task Reconnect()
         {
+            if (state == ConnectState.Connected || state == ConnectState.Connecting)
+                throw new InvalidOperationException("连接中，不能执行重连操作");
             await Connect();
         }
 
@@ -96,27 +109,31 @@ namespace Framework.NetWork
 
         public void Tick()
         {
-            if (state != ConnectState.Connected)
-                return;
+            if (state == ConnectState.Connected)
+            {
+                m_StreamWriter.Flush();
+            }
 
-            m_StreamWriter.Flush();
+            HandleException();
+        }
+
+        public void Close()
+        {
+            m_HandleException = true;
         }
 
         internal void RaiseException(Exception e)
         {
             Trace.Debug(e.ToString());
-            InternalClose();
+            m_HandleException = true;
         }
 
-        public void Close()
+        private void HandleException()
         {
-            try
+            if (m_HandleException)
             {
+                m_HandleException = false;
                 InternalClose();
-            }
-            catch (Exception e)
-            {
-                Trace.Debug(e.ToString());
             }
         }
 
@@ -174,9 +191,9 @@ namespace Framework.NetWork
             Send(buf, 0, buf.Length);
         }
 
-        public void FetchBufferToWrite(int length, out byte[] buf, out int offset)
+        public void RequestBufferToWrite(int length, out byte[] buf, out int offset)
         {
-            m_StreamWriter.FetchBufferToWrite(length, out buf, out offset);
+            m_StreamWriter.RequestBufferToWrite(length, out buf, out offset);
         }
 
         public void FinishBufferWriting(int length)
