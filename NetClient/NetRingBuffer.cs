@@ -137,13 +137,13 @@ namespace Framework.NetWork
         //}
 
         // get continous free capacity from head to buffer end
-        private int GetContinuousUnusedCapacityToEnd()
+        private int GetConsecutiveUnusedCapacityToEnd()
         {
             return Math.Min(GetUnusedCapacity(), Head >= Tail ? m_Buffer.Length - Head : 0);
         }
 
         // get continous free capacity from buffer start to tail
-        private int GetContinuousUnusedCapacityFromStart()
+        private int GetConsecutiveUnusedCapacityFromStart()
         {
             int count = 0;
             if (Head < Tail)
@@ -162,24 +162,29 @@ namespace Framework.NetWork
             return Math.Min(GetUnusedCapacity(), count);
         }
 
-        internal int GetContinuousUnusedCapacity()
+        internal int GetConsecutiveUnusedCapacity()
         {
-            int count = GetContinuousUnusedCapacityToEnd();
+            int count = GetConsecutiveUnusedCapacityToEnd();
             if (count == 0)
-                count = GetContinuousUnusedCapacityFromStart();
+                count = GetConsecutiveUnusedCapacityFromStart();
             return count;
         }
 
-        private int GetContinuousUsedCapacity()
+        private int GetConsecutiveUsedCapacity()
         {
             return Head >= Tail ? Head - Tail : m_Buffer.Length - Tail;
         }
-        
-        // 获取已接收到的网络数据
-        internal ref readonly byte[] FetchBufferToRead(out int offset, out int length)
+
+        /// <summary>
+        /// 获取已接收到的网络数据
+        /// </summary>
+        /// <param name="offset"></param>
+        /// <param name="length"></param>
+        /// <returns></returns>
+        internal ref readonly byte[] Read(out int offset, out int length)
         {
             offset = Tail;
-            length = GetContinuousUsedCapacity();
+            length = GetConsecutiveUsedCapacity();
             return ref m_Buffer;
         }
 
@@ -236,10 +241,10 @@ namespace Framework.NetWork
         /// <param name="offset">the position where can be written</param>
         internal void RequestBufferToWrite(int length, out byte[] buf, out int offset)
         {
-            if (length > GetContinuousUnusedCapacityToEnd() && length > GetContinuousUnusedCapacityFromStart())
+            if (length > GetConsecutiveUnusedCapacityToEnd() && length > GetConsecutiveUnusedCapacityFromStart())
                 throw new ArgumentOutOfRangeException($"NetRingBuffer: no space to receive data {length}");
 
-            int countToEnd = GetContinuousUnusedCapacityToEnd();
+            int countToEnd = GetConsecutiveUnusedCapacityToEnd();
             if(countToEnd > 0 && length > countToEnd)
             { // need consecutive space, so skip the remaining buffer, start from beginning
                 Fence = Head;

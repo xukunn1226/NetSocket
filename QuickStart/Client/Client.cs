@@ -14,56 +14,7 @@ namespace Client
     class Client
     {
         static private NetManager<string> m_NetManager;
-
-        static async Task Main3()
-        {
-            var tokenSource2 = new CancellationTokenSource();
-            CancellationToken ct = tokenSource2.Token;
-
-            var task = Task.Run(() =>
-            {
-                // Were we already canceled?
-                ct.ThrowIfCancellationRequested();
-
-                bool moreToDo = true;
-                while (moreToDo)
-                {
-                    // Poll on this property if you have to do
-                    // other cleanup before throwing.
-                    if (ct.IsCancellationRequested)
-                    {
-                        // Clean up here, then...
-                        ct.ThrowIfCancellationRequested();
-                        //break;
-                    }
-
-                    ConsoleKeyInfo key = Console.ReadKey();
-                    if(key.Key == ConsoleKey.Enter)
-                    {
-                        tokenSource2.Cancel();
-                    }
-                }
-            }, tokenSource2.Token); // Pass same token to Task.Run.
-
-            //tokenSource2.Cancel();
-
-            // Just continue on this thread, or await with try-catch:
-            try
-            {
-                await task;
-            }
-            catch (OperationCanceledException e)
-            {
-                Console.WriteLine($"{nameof(OperationCanceledException)} thrown with message: {e.Message}");
-            }
-            finally
-            {
-                tokenSource2.Dispose();
-            }
-
-            Console.ReadKey();
-        }
-
+        
         static NetClient m_Client;
         static async Task Main(string[] args)
         {
@@ -235,74 +186,53 @@ namespace Client
             }
         }
 
-        static void CloseTest()
+        static async Task Main3()
         {
-            while (true)
+            var tokenSource2 = new CancellationTokenSource();
+            CancellationToken ct = tokenSource2.Token;
+
+            var task = Task.Run(() =>
             {
-                Console.WriteLine("\nPress 'C' to quit");
-                ConsoleKeyInfo key = Console.ReadKey();
-                if (key.Key == ConsoleKey.C)
+                // Were we already canceled?
+                ct.ThrowIfCancellationRequested();
+
+                bool moreToDo = true;
+                while (moreToDo)
                 {
-                    m_NetManager.Close();
+                    // Poll on this property if you have to do
+                    // other cleanup before throwing.
+                    if (ct.IsCancellationRequested)
+                    {
+                        // Clean up here, then...
+                        ct.ThrowIfCancellationRequested();
+                        //break;
+                    }
+
+                    ConsoleKeyInfo key = Console.ReadKey();
+                    if (key.Key == ConsoleKey.Enter)
+                    {
+                        tokenSource2.Cancel();
+                    }
                 }
-            }
-        }
+            }, tokenSource2.Token); // Pass same token to Task.Run.
 
+            //tokenSource2.Cancel();
 
-
-        async static void Connect()
-        {
-            string host = "webcode.me";
-            int port = 80;
-            
-            var client = new TcpClient();
+            // Just continue on this thread, or await with try-catch:
             try
             {
-                await client.ConnectAsync(host, port);
-                Console.WriteLine("Connect successful");
-
-                Write();
-                Receive();
-                int ii = 0;
+                await task;
             }
-            catch (SocketException e)
+            catch (OperationCanceledException e)
             {
-                Console.WriteLine(e.Message);
-                Console.WriteLine(e.ToString());
+                Console.WriteLine($"{nameof(OperationCanceledException)} thrown with message: {e.Message}");
             }
-            // https://stackoverflow.com/questions/41718342/async-socket-client-using-tcpclient-class-c-sharp
-            //Task.Run(() => Receive());
-            //Task.Run(() => Write());
-
-            //await Receive();
-            //await Write();
-
-            
-        }
-
-        async static void Receive()
-        {
-            while (true)
+            finally
             {
-                await Task.Delay(1000);
-                Console.WriteLine("Receive");
+                tokenSource2.Dispose();
             }
-        }
 
-        async static void Write()
-        {
-            while(true)
-            {
-                //await Task.Delay(500);
-                await Foo();
-                Console.WriteLine("Write");
-            }
-        }
-
-        async static Task Foo()
-        {
-            await Task.Delay(1);
-            return;
+            Console.ReadKey();
         }
     }
 }

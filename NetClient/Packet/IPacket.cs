@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -10,5 +11,6 @@ namespace Framework.NetWork
     {
         bool Deserialize(in byte[] data, int offset, int length, out int realLength, out T msg);
         byte[] Serialize(T msg);
+        void Serialize(T msg, Stream output);
     }
 }

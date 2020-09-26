@@ -27,5 +27,10 @@ namespace Framework.NetWork
             //return Encoding.ASCII.GetBytes(msg);
             return null;
         }
+
+        public void Serialize(IMessage msg, Stream output)
+        {
+
+        }
     }
 }

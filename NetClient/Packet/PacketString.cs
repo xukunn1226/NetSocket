@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -18,6 +19,11 @@ namespace Framework.NetWork
         public byte[] Serialize(string msg)
         {
             return Encoding.ASCII.GetBytes(msg);
+        }
+
+        public void Serialize(string msg, Stream output)
+        {
+
         }
     }
 }

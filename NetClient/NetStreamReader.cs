@@ -7,7 +7,7 @@ namespace Framework.NetWork
 {
     sealed internal class NetStreamReader : NetStream
     {
-        private NetClient         m_NetClient;
+        private NetClient           m_NetClient;
         private NetworkStream       m_Stream;
 
         internal NetStreamReader(NetClient netClient, int capacity = 8 * 1024)
@@ -45,7 +45,7 @@ namespace Framework.NetWork
 
         internal ref readonly byte[] FetchBufferToRead(out int offset, out int length)
         {
-            return ref m_Buffer.FetchBufferToRead(out offset, out length);
+            return ref m_Buffer.Read(out offset, out length);
         }
 
         internal void FinishRead(int length)
@@ -59,7 +59,7 @@ namespace Framework.NetWork
             {
                 while (m_NetClient.state == ConnectState.Connected)
                 {
-                    int freeCount = m_Buffer.GetContinuousUnusedCapacity();             // 填充连续的空闲空间                
+                    int freeCount = m_Buffer.GetConsecutiveUnusedCapacity();             // 填充连续的空闲空间                
                     if (freeCount == 0)
                         throw new ArgumentOutOfRangeException("ReadAsync: buff is full");
 
