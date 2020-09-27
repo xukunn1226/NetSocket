@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using System.Net.Sockets;
 using System.Net;
 using Framework.NetWork.Log;
+using System.IO;
 
 namespace Framework.NetWork
 {
@@ -113,10 +114,7 @@ namespace Framework.NetWork
 
         public void Tick()
         {
-            if (state == ConnectState.Connected)
-            {
-                m_StreamWriter.Flush();
-            }
+            m_StreamWriter.Flush();
 
             HandleException();
         }
@@ -163,7 +161,7 @@ namespace Framework.NetWork
         {
             try
             {
-                m_StreamWriter.Write(buf, offset, length);
+                m_StreamWriter.Send(buf, offset, length);
             }
             catch (ArgumentNullException e)
             {
@@ -180,9 +178,26 @@ namespace Framework.NetWork
             Send(buf, 0, buf.Length);
         }
 
+        /// <summary>
+        /// 请求指定长度（length）的连续空间，写入完成后务必调用FinishBufferWriting
+        /// </summary>
+        /// <param name="length"></param>
+        /// <param name="buf"></param>
+        /// <param name="offset"></param>
+        /// <returns></returns>
         public void RequestBufferToWrite(int length, out byte[] buf, out int offset)
         {
             m_StreamWriter.RequestBufferToWrite(length, out buf, out offset);
+        }
+
+        /// <summary>
+        /// 同上
+        /// </summary>
+        /// <param name="length"></param>
+        /// <param name="stream"></param>
+        public void RequestBufferToWrite(int length, out MemoryStream stream)
+        {
+            m_StreamWriter.RequestBufferToWrite(length, out stream);
         }
 
         public void FinishBufferWriting(int length)

@@ -9,8 +9,9 @@ namespace Framework.NetWork
 {
     public interface IPacket<T> where T : class
     {
-        bool Deserialize(in byte[] data, int offset, int length, out int realLength, out T msg);
-        byte[] Serialize(T msg);
-        void Serialize(T msg, Stream output);
+        bool    Deserialize(in byte[] data, int offset, int length, out int realLength, out T msg);
+        byte[]  Serialize(T msg);
+        void    Serialize(T msg, MemoryStream output);
+        int     CalculateSize(T msg);
     }
 }

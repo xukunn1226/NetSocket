@@ -18,14 +18,16 @@ namespace Framework.NetWork
     /// 5、任何异常情况能否退出WriteAsync    
     /// 7、持续的发送协议时重复1-6
     /// 8、测试RequestBufferToWrite
+    /// 9、同时开启wifi，4G时，先断开wifi，再断开4G，然后再逐一连接
     /// </summary>
     sealed internal class NetStreamWriter : NetStream
     {
-        private NetClient                 m_NetClient;
-        private NetworkStream               m_Stream;
+        private NetClient                   m_NetClient;
+        private NetworkStream               m_NetworkStream;
         private SemaphoreSlim               m_SendBufferSema;                       // 控制是否可以消息发送的信号量
                                                                                     // The count is decremented each time a thread enters the semaphore, and incremented each time a thread releases the semaphore
         private bool                        m_isSendingBuffer;                      // 发送消息IO是否进行中
+        private MemoryStream                m_MemoryStream;
 
         struct WriteCommand
         {
@@ -40,14 +42,15 @@ namespace Framework.NetWork
             if (netClient == null) throw new ArgumentNullException();
 
             m_NetClient = netClient;
+            m_MemoryStream = new MemoryStream(Buffer, true);
         }
 
         internal void Start(NetworkStream stream)
         {
-            m_Stream = stream;
+            m_NetworkStream = stream;
 
-            // setup environment
-            m_Buffer.Clear();
+            Reset();
+            m_MemoryStream.Seek(0, SeekOrigin.Begin);
             m_SendBufferSema?.Dispose();
             m_SendBufferSema = new SemaphoreSlim(0, 1);
             m_isSendingBuffer = false;
@@ -66,50 +69,10 @@ namespace Framework.NetWork
             }
 
             // free unmanaged resources
+            m_MemoryStream?.Dispose();
             m_SendBufferSema?.Dispose();
 
             m_Disposed = true;
-        }
-
-        internal void Write(byte[] data, int offset, int length)
-        {
-            m_Buffer.Write(data, offset, length);
-        }
-
-        internal void Write(byte[] data)
-        {
-            m_Buffer.Write(data, 0, data.Length);
-        }
-
-        /// <summary>
-        /// 请求指定长度（length）的连续空间
-        /// </summary>
-        /// <param name="length"></param>
-        /// <param name="buf"></param>
-        /// <param name="offset"></param>
-        /// <returns></returns>
-        internal bool RequestBufferToWrite(int length, out byte[] buf, out int offset)
-        {
-            try
-            {
-                m_Buffer.RequestBufferToWrite(length, out buf, out offset);
-                return true;
-            }
-            catch(ArgumentOutOfRangeException e)
-            {
-                buf = null;
-                offset = 0;
-                return false;
-            }
-        }
-
-        /// <summary>
-        /// 通知stream写入完成
-        /// </summary>
-        /// <param name="length"></param>
-        internal void FinishBufferWriting(int length)
-        {
-            m_Buffer.FinishBufferWriting(length);
         }
 
         /// <summary>
@@ -132,13 +95,13 @@ namespace Framework.NetWork
                 m_SendBufferSema != null &&
                 m_SendBufferSema.CurrentCount == 0 &&           // The number of remaining threads that can enter the semaphore
                 !m_isSendingBuffer &&                           // 上次消息已发送完成
-                !m_Buffer.IsEmpty())                            // 已缓存一定的待发送消息
+                !IsEmpty())                                     // 已缓存一定的待发送消息
             {
                 // cache the pending sending data
-                m_CommandQueue.Enqueue(new WriteCommand() { Head = m_Buffer.Head, Fence = m_Buffer.Fence });
+                m_CommandQueue.Enqueue(new WriteCommand() { Head = this.Head, Fence = this.Fence });
 
                 // 每次push command完重置Fence
-                m_Buffer.ResetFence();
+                ResetFence();
 
                 m_SendBufferSema.Release();                     // Sema.CurrentCount += 1
             }
@@ -157,23 +120,23 @@ namespace Framework.NetWork
                     {
                         WriteCommand cmd = m_CommandQueue.Peek();
 
-                        int length = m_Buffer.GetUsedCapacity(cmd.Head);
-                        if (cmd.Head > m_Buffer.Tail)
+                        int length = GetUsedCapacity(cmd.Head);
+                        if (cmd.Head > Tail)
                         {
-                            await m_Stream.WriteAsync(m_Buffer.Buffer, m_Buffer.Tail, length);
+                            await m_NetworkStream.WriteAsync(Buffer, Tail, length);
                         }
                         else
                         {
                             if (cmd.Fence > 0)
-                                await m_Stream.WriteAsync(m_Buffer.Buffer, m_Buffer.Tail, cmd.Fence - m_Buffer.Tail);
+                                await m_NetworkStream.WriteAsync(Buffer, Tail, cmd.Fence - Tail);
                             else
-                                await m_Stream.WriteAsync(m_Buffer.Buffer, m_Buffer.Tail, m_Buffer.Buffer.Length - m_Buffer.Tail);
+                                await m_NetworkStream.WriteAsync(Buffer, Tail, Buffer.Length - Tail);
 
                             if (cmd.Head > 0)
-                                await m_Stream.WriteAsync(m_Buffer.Buffer, 0, cmd.Head);
+                                await m_NetworkStream.WriteAsync(Buffer, 0, cmd.Head);
                         }
 
-                        m_Buffer.FinishBufferSending(length);        // 数据发送完成，更新Tail
+                        FinishBufferSending(length);        // 数据发送完成，更新Tail
                         m_CommandQueue.Dequeue();
                     }
                     m_isSendingBuffer = false;
@@ -210,6 +173,64 @@ namespace Framework.NetWork
         private void RaiseException(Exception e)
         {
             m_NetClient.RaiseException(e);
+        }
+
+        internal void Send(byte[] data, int offset, int length)
+        {
+            Write(data, offset, length);
+        }
+
+        internal void Send(byte[] data)
+        {
+            Write(data);
+        }
+
+        /// <summary>
+        /// 请求指定长度（length）的连续空间
+        /// </summary>
+        /// <param name="length"></param>
+        /// <param name="buf"></param>
+        /// <param name="offset"></param>
+        /// <returns></returns>
+        internal bool RequestBufferToWrite(int length, out byte[] buf, out int offset)
+        {
+            try
+            {
+                BeginWrite(length, out buf, out offset);
+                return true;
+            }
+            catch (ArgumentOutOfRangeException e)
+            {
+                buf = null;
+                offset = 0;
+                return false;
+            }
+        }
+
+        internal bool RequestBufferToWrite(int length, out MemoryStream stream)
+        {
+            byte[] buf;
+            int offset;
+            stream = m_MemoryStream;
+            try
+            {
+                BeginWrite(length, out buf, out offset);
+                m_MemoryStream.Seek(offset, SeekOrigin.Begin);
+                return true;
+            }
+            catch(ArgumentOutOfRangeException e)
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 通知stream写入完成
+        /// </summary>
+        /// <param name="length"></param>
+        internal void FinishBufferWriting(int length)
+        {
+            EndWrite(length);
         }
     }
 }

@@ -11,11 +11,11 @@ namespace Framework.NetWork
         private const int       m_MinCapacity   = 1024;
         private byte[]          m_Buffer;
 
-        internal byte[]         Buffer          { get { return m_Buffer; } }
-        internal int            Head            { get; set; }
-        internal int            Tail            { get; set; }
-        internal int            Fence           { get; set; }
-        internal int            IndexMask       { get; private set; }
+        protected byte[]        Buffer          { get { return m_Buffer; } }
+        protected int           Head            { get; private set; }
+        protected int           Tail            { get; private set; }
+        protected int           Fence           { get; private set; }
+        private int             IndexMask       { get; set; }
 
         internal NetRingBuffer(int capacity = 8 * 1024)
         {
@@ -34,19 +34,19 @@ namespace Framework.NetWork
             IndexMask = m_Buffer.Length - 1;
         }
 
-        internal void Clear()
+        protected void Reset()
         {
             Head = 0;
             Tail = 0;
             Fence = 0;
         }
 
-        internal bool IsEmpty()
+        protected bool IsEmpty()
         {
             return Head == Tail;
         }
 
-        internal bool IsFull()
+        protected bool IsFull()
         {
             return ((Head + 1) & IndexMask) == Tail;
         }
@@ -74,7 +74,7 @@ namespace Framework.NetWork
             return Head >= Tail ? Head - Tail : m_Buffer.Length - (Tail - Head);
         }
 
-        internal int GetUsedCapacity(int head)
+        protected int GetUsedCapacity(int head)
         {
             return head >= Tail ? head - Tail : m_Buffer.Length - (Tail - head);
         }
@@ -162,7 +162,11 @@ namespace Framework.NetWork
             return Math.Min(GetUnusedCapacity(), count);
         }
 
-        internal int GetConsecutiveUnusedCapacity()
+        /// <summary>
+        /// 获取连续空闲空间大小
+        /// </summary>
+        /// <returns></returns>
+        protected int GetConsecutiveUnusedCapacity()
         {
             int count = GetConsecutiveUnusedCapacityToEnd();
             if (count == 0)
@@ -175,22 +179,32 @@ namespace Framework.NetWork
             return Head >= Tail ? Head - Tail : m_Buffer.Length - Tail;
         }
 
+        protected void AdvanceHead(int length)
+        {
+            Head = (Head + length) & IndexMask;
+        }
+
+        protected void AdvanceTail(int length)
+        {
+            Tail = (Tail + length) & IndexMask;
+        }
+
         /// <summary>
         /// 获取已接收到的网络数据
         /// </summary>
         /// <param name="offset"></param>
         /// <param name="length"></param>
         /// <returns></returns>
-        internal ref readonly byte[] Read(out int offset, out int length)
+        protected ref readonly byte[] BeginRead(out int offset, out int length)
         {
             offset = Tail;
             length = GetConsecutiveUsedCapacity();
             return ref m_Buffer;
         }
 
-        internal void FinishRead(int length)
+        protected void EndRead(int length)
         {
-            Tail = (Tail + length) & IndexMask;
+            AdvanceTail(length);
         }
 
         /// <summary>
@@ -199,7 +213,7 @@ namespace Framework.NetWork
         /// <param name="data"></param>
         /// <param name="offset"></param>
         /// <param name="length"></param>
-        internal void Write(byte[] data, int offset, int length)
+        protected void Write(byte[] data, int offset, int length)
         {
             if (data == null)
                 throw new ArgumentNullException("data == null");
@@ -221,14 +235,14 @@ namespace Framework.NetWork
                 System.Buffer.BlockCopy(data, offset, m_Buffer, Head, countToEnd);
                 System.Buffer.BlockCopy(data, countToEnd, m_Buffer, 0, length - countToEnd);
             }
-            Head = (Head + length) & IndexMask;
+            AdvanceHead(length);
         }
 
         /// <summary>
         /// 同上
         /// </summary>
         /// <param name="data"></param>
-        internal void Write(byte[] data)
+        protected void Write(byte[] data)
         {
             Write(data, 0, data.Length);
         }
@@ -239,7 +253,7 @@ namespace Framework.NetWork
         /// <param name="length">the length of write, expand buffer's capacity internally if necessary</param>
         /// <param name="buf">buffer to write</param>
         /// <param name="offset">the position where can be written</param>
-        internal void RequestBufferToWrite(int length, out byte[] buf, out int offset)
+        protected void BeginWrite(int length, out byte[] buf, out int offset)
         {
             if (length > GetConsecutiveUnusedCapacityToEnd() && length > GetConsecutiveUnusedCapacityFromStart())
                 throw new ArgumentOutOfRangeException($"NetRingBuffer: no space to receive data {length}");
@@ -259,15 +273,15 @@ namespace Framework.NetWork
         /// 数据写入缓存完成，与FetchBufferToWrite对应，同一帧调用
         /// </summary>
         /// <param name="length"></param>
-        internal void FinishBufferWriting(int length)
+        protected void EndWrite(int length)
         {
-            Head = (Head + length) & IndexMask;
+            AdvanceHead(length);
         }
 
         /// <summary>
         /// 撤销fence，主线程调用
         /// </summary>
-        internal void ResetFence()
+        protected void ResetFence()
         {
             Fence = 0;
         }
@@ -276,10 +290,10 @@ namespace Framework.NetWork
         /// 发送数据完成，子线程调用
         /// </summary>
         /// <param name="length"></param>
-        internal void FinishBufferSending(int length)
+        protected void FinishBufferSending(int length)
         {
             // 数据包发送完成更新m_Tail
-            Tail = (Tail + length) & IndexMask;
+            AdvanceTail(length);
         }
     }
 }

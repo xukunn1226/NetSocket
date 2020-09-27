@@ -15,41 +15,38 @@ namespace Client
     {
         static private NetManager<string> m_NetManager;
         
-        static NetClient m_Client;
         static async Task Main(string[] args)
         {
             Trace.EnableConsole();
             Console.WriteLine("Press 'F1' to connect server...");
+            m_NetManager = new NetManager<string>(new PacketString());
 
             ConsoleKeyInfo key;
             key = Console.ReadKey();
 
-            while (m_Client == null || m_Client.state != ConnectState.Connected)
+            while (m_NetManager.state != ConnectState.Connected)
             {
                 if (key.Key == ConsoleKey.F1)
                 {
-                    m_Client = new NetClient("127.0.0.1", 11000);
-                    await m_Client.Connect();
-                    if (m_Client.state == ConnectState.Connected)
+                    await m_NetManager.Connect("127.0.0.1", 11000);
+
+                    if (m_NetManager.state == ConnectState.Connected)
                         Console.WriteLine("Connect server...");
                 }
             }
 
-            while (m_Client != null && m_Client.state == ConnectState.Connected)
+            while (m_NetManager.state == ConnectState.Connected)
             {
                 Console.WriteLine("Press 'C' to close socket OR 'Enter' to send data");
                 key = Console.ReadKey();
                 if (key.Key == ConsoleKey.C)
                 {
-                    m_Client.Close();
-                    m_Client.Tick();
+                    m_NetManager.Close();
+                    m_NetManager.Tick();
                     break;
                 }
                 else if(key.Key == ConsoleKey.Enter)
                 {
-                    //m_Client.Send(Encoding.ASCII.GetBytes("hello world"));
-                    //m_Client.Tick();
-
                     await AutoSendingEx();
                     break;
                 }
@@ -62,24 +59,36 @@ namespace Client
         static async Task AutoSendingEx()
         {
             int index = 0;
-            while (true && m_Client.state == ConnectState.Connected)
+            while (true && m_NetManager.state == ConnectState.Connected)
             {
                 string data = "Hello world..." + index++;
                 Console.WriteLine("\n Sending...:" + data);
-                m_Client.Send(Encoding.ASCII.GetBytes(data));
-                if(index % 3 == 0)
-                    m_Client.Tick();
+                m_NetManager.SendData(data);
+                if (index % 3 == 0)
+                    m_NetManager.Tick();
 
                 if (index == 300)
                 {
-                    m_Client.Close();
-                    m_Client.Tick();
+                    m_NetManager.Close();
+                    m_NetManager.Tick();
                     break;
                 }
 
                 await Task.Delay(10);
             }
         }
+
+
+
+
+
+
+
+
+
+
+
+
 
         static async Task Main1(string[] args)
         {
@@ -159,8 +168,8 @@ namespace Client
             {
                 string data = "Hello world..." + index++;
                 Console.WriteLine("\n Sending...:" + data);
-                m_NetManager.SetData(data);
-                m_NetManager.Update();
+                m_NetManager.SendData(data);
+                m_NetManager.Tick();
 
                 if (index == 300)
                     m_NetManager.Close();
@@ -179,7 +188,7 @@ namespace Client
                 if (key.Key == ConsoleKey.Enter)
                 {
                     //byte[] byteData = Encoding.ASCII.GetBytes(data);
-                    m_NetManager.SetData(data, true);
+                    m_NetManager.SendData(data);
                 }
                 else if (key.Key == ConsoleKey.Q)
                     break;

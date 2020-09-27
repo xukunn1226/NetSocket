@@ -2,14 +2,15 @@
 
 namespace Framework.NetWork
 {
-    abstract internal class NetStream : IDisposable
+    abstract internal class NetStream : NetRingBuffer, IDisposable
     {
         protected bool                      m_Disposed;
-        protected NetRingBuffer             m_Buffer;
+        //protected NetRingBuffer             m_Buffer;
 
         internal NetStream(int capacity = 8 * 1024)
+            : base(capacity)
         {
-            m_Buffer = new NetRingBuffer(capacity);
+            //m_Buffer = new NetRingBuffer(capacity);
         }
 
         ~NetStream()

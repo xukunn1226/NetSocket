@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading.Tasks;
 using Framework.NetWork.Log;
 
@@ -51,7 +52,7 @@ namespace Framework.NetWork
             Trace.Debug("...Disconnected");
         }
 
-        public void Update()
+        public void Tick()
         {
             if (m_NetClient == null)
                 return;
@@ -60,12 +61,18 @@ namespace Framework.NetWork
             ReceiveData();
         }
 
-        public void SetData(TMessage data, bool needFlush = false)
+        public void SendData(TMessage data)
         {
-            byte[] buf = m_Parser.Serialize(data);
-            m_NetClient.Send(buf);
-            if(needFlush)
-                m_NetClient.Tick();
+            // method 1. 序列化到新的空间，有GC
+            //byte[] buf = m_Parser.Serialize(data);
+            //m_NetClient.Send(buf);
+
+            // method 2. 序列化到stream，因buff已预先分配、循环利用，故无GC
+            int length = m_Parser.CalculateSize(data);
+            MemoryStream stream;
+            m_NetClient.RequestBufferToWrite(length, out stream);
+            m_Parser.Serialize(data, stream);
+            m_NetClient.FinishBufferWriting(length);
         }
 
         private void ReceiveData()

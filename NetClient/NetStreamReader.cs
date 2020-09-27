@@ -23,7 +23,7 @@ namespace Framework.NetWork
             m_Stream = stream;
 
             // setup environment
-            m_Buffer.Clear();
+            Reset();
             
             Task.Run(ReceiveAsync);
         }
@@ -43,28 +43,18 @@ namespace Framework.NetWork
             m_Disposed = true;
         }
 
-        internal ref readonly byte[] FetchBufferToRead(out int offset, out int length)
-        {
-            return ref m_Buffer.Read(out offset, out length);
-        }
-
-        internal void FinishRead(int length)
-        {
-            m_Buffer.FinishRead(length);
-        }
-
         private async void ReceiveAsync()
         {
             try
             {
                 while (m_NetClient.state == ConnectState.Connected)
                 {
-                    int freeCount = m_Buffer.GetConsecutiveUnusedCapacity();             // 填充连续的空闲空间                
+                    int freeCount = GetConsecutiveUnusedCapacity();             // 填充连续的空闲空间                
                     if (freeCount == 0)
                         throw new ArgumentOutOfRangeException("ReadAsync: buff is full");
 
-                    int receiveByte = await m_Stream.ReadAsync(m_Buffer.Buffer, m_Buffer.Head, freeCount);
-                    m_Buffer.Head = (m_Buffer.Head + receiveByte) & m_Buffer.IndexMask;
+                    int receiveByte = await m_Stream.ReadAsync(Buffer, Head, freeCount);
+                    AdvanceHead(receiveByte);
 
                     if (receiveByte <= 0)              // 连接中断
                     {
@@ -78,17 +68,16 @@ namespace Framework.NetWork
             }
             catch (ObjectDisposedException e)
             {
-                //Trace.Error(e.ToString());          // The NetworkStream is closed
+                // The NetworkStream is closed
                 RaiseException(e);
             }
             catch (InvalidOperationException e)
             {
-                //Trace.Error(e.ToString());          // The NetworkStream does not support reading
+                // The NetworkStream does not support reading
                 RaiseException(e);
             }
             catch (IOException e)
             {
-                //Trace.Error(e.ToString());
                 RaiseException(e);
             }
             catch (ArgumentOutOfRangeException e)
@@ -100,6 +89,16 @@ namespace Framework.NetWork
         private void RaiseException(Exception e)
         {
             m_NetClient.RaiseException(e);
+        }
+
+        internal ref readonly byte[] FetchBufferToRead(out int offset, out int length)
+        {
+            return ref BeginRead(out offset, out length);
+        }
+
+        internal void FinishRead(int length)
+        {
+            EndRead(length);
         }
     }
 }

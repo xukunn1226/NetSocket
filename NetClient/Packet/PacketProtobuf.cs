@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Framework.NetWork;
+﻿using System.IO;
 using Google.Protobuf;
 
 namespace Framework.NetWork
@@ -28,9 +22,14 @@ namespace Framework.NetWork
             return null;
         }
 
-        public void Serialize(IMessage msg, Stream output)
+        public void Serialize(IMessage msg, MemoryStream output)
         {
 
+        }
+
+        public int CalculateSize(IMessage msg)
+        {
+            return msg.CalculateSize();
         }
     }
 }

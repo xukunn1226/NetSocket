@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
+﻿using System.IO;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace Framework.NetWork
 {
@@ -21,9 +17,15 @@ namespace Framework.NetWork
             return Encoding.ASCII.GetBytes(msg);
         }
 
-        public void Serialize(string msg, Stream output)
+        public void Serialize(string msg, MemoryStream output)
         {
+            byte[] data = Encoding.ASCII.GetBytes(msg);
+            output.Write(data, 0, data.Length);
+        }
 
+        public int CalculateSize(string msg)
+        {
+            return Encoding.ASCII.GetByteCount(msg);
         }
     }
 }
