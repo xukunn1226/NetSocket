@@ -198,7 +198,7 @@ namespace Framework.NetWork
         protected ref readonly byte[] BeginRead(out int offset, out int length)
         {
             offset = Tail;
-            length = GetConsecutiveUsedCapacity();
+            length = GetUsedCapacity();
             return ref m_Buffer;
         }
 

@@ -17,7 +17,6 @@ namespace Client
         
         static async Task Main(string[] args)
         {
-            Trace.EnableConsole();
             Console.WriteLine("Press 'F1' to connect server...");
             m_NetManager = new NetManager<string>(new PacketString());
 
@@ -47,7 +46,14 @@ namespace Client
                 }
                 else if(key.Key == ConsoleKey.Enter)
                 {
-                    await AutoSendingEx();
+                    try
+                    {
+                        await AutoSendingEx();
+                    }
+                    catch(Exception e)
+                    {
+                        int ii = 0;
+                    }
                     break;
                 }
             }

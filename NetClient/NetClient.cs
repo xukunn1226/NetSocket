@@ -205,11 +205,21 @@ namespace Framework.NetWork
             m_StreamWriter.FinishBufferWriting(length);
         }
 
+        /// <summary>
+        /// 获取可读的连续空间
+        /// </summary>
+        /// <param name="offset"></param>
+        /// <param name="length"></param>
+        /// <returns></returns>
         public ref readonly byte[] FetchBufferToRead(out int offset, out int length)
         {
             return ref m_StreamReader.FetchBufferToRead(out offset, out length);
         }
 
+        /// <summary>
+        /// 实际读取了多少数据
+        /// </summary>
+        /// <param name="length"></param>
         public void FinishRead(int length)
         {
             m_StreamReader.FinishRead(length);

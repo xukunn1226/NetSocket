@@ -48,6 +48,8 @@
     <Compile Include="Log\DiagnosticListener.cs" />
     <Compile Include="Log\ITraceListener.cs" />
     <Compile Include="Log\Trace.cs" />
+    <Compile Include="Message\Msg.cs" />
+    <Compile Include="Message\Msg2.cs" />
     <Compile Include="NetClient.cs" />
     <Compile Include="NetStream.cs" />
     <Compile Include="NetStreamReader.cs" />
@@ -65,5 +67,6 @@
     <Compile Include="Utils\ReflectionHelper.cs" />
     <Compile Include="Utils\TaskEx.cs" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

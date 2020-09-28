@@ -9,6 +9,7 @@ namespace Framework.NetWork
     {
         private NetClient           m_NetClient;
         private NetworkStream       m_Stream;
+        private byte[]              m_SpanBuffer = new byte[1024];
 
         internal NetStreamReader(NetClient netClient, int capacity = 8 * 1024)
             : base(capacity)
@@ -93,7 +94,20 @@ namespace Framework.NetWork
 
         internal ref readonly byte[] FetchBufferToRead(out int offset, out int length)
         {
-            return ref BeginRead(out offset, out length);
+            ref readonly byte[] buf = ref BeginRead(out offset, out length);
+            if(Head > 0 && Head < Tail)
+            { // 当数据跨界时复制至Span Buffer以使空间连续
+                if(length > m_SpanBuffer.Length)
+                {
+                    m_SpanBuffer = new byte[length];
+                }
+                int countToEnd = Buffer.Length - Tail;
+                System.Buffer.BlockCopy(buf, offset, m_SpanBuffer, 0, countToEnd);
+                System.Buffer.BlockCopy(buf, 0, m_SpanBuffer, countToEnd, length - countToEnd);
+                offset = 0;
+                return ref m_SpanBuffer;
+            }
+            return ref buf;
         }
 
         internal void FinishRead(int length)
