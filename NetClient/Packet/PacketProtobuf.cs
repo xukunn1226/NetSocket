@@ -8,7 +8,7 @@ namespace Framework.NetWork
     /// <summary>
     /// Packet format: length + message
     /// </summary>
-    class PacketProtobuf : IPacket<IMessage>
+    public class PacketProtobuf : IPacket<IMessage>
     {
         public bool Deserialize(in byte[] data, int offset, int length, out int realLength, out IMessage msg)
         {
@@ -49,7 +49,10 @@ namespace Framework.NetWork
 
         public void Serialize(IMessage msg, MemoryStream output)
         {
-
+            ushort len = (ushort)msg.CalculateSize();
+            byte[] buf = System.BitConverter.GetBytes(len);
+            output.Write(buf, 0, buf.Length);
+            msg.WriteTo(output);
         }
 
         public int CalculateSize(IMessage msg)
