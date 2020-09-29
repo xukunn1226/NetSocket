@@ -48,6 +48,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Client.cs" />
+    <Compile Include="Message\Msg.cs" />
+    <Compile Include="Message\Msg2.cs" />
+    <Compile Include="NetManager\NetManager.cs" />
+    <Compile Include="Packet\IPacket.cs" />
+    <Compile Include="Packet\PacketProtobuf.cs" />
+    <Compile Include="Packet\PacketString.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

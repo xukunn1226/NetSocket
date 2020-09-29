@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using Framework.NetWork.Log;
+using Framework.NetWork;
 
-namespace Framework.NetWork
+namespace NetWorkApplication
 {
     public class NetManager<TMessage> where TMessage : class
     {
@@ -22,7 +23,7 @@ namespace Framework.NetWork
 
         async public Task Connect(string host, int port)
         {
-            m_NetClient = new NetClient(host, port, OnConnected, OnDisconnected);
+            m_NetClient = new NetClient(host, port, 4096, 2048, OnConnected, OnDisconnected);
             await m_NetClient.Connect();
         }
 

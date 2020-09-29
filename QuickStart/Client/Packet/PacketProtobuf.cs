@@ -2,8 +2,9 @@
 using Framework.NetWork.Log;
 using Google.Protobuf;
 using NetProtocol;
+using Framework.NetWork;
 
-namespace Framework.NetWork
+namespace NetWorkApplication
 {
     /// <summary>
     /// Packet format: [length | message]

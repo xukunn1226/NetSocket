@@ -41,13 +41,13 @@ namespace Framework.NetWork
 
         private bool                m_HandleException;
 
-        public NetClient(string host, int port, onConnected connectionHandler = null, onDisconnected disconnectedHandler = null)
+        public NetClient(string host, int port, int sendBufferSize = 4 * 1024, int receiveBufferSize = 8 * 1024, onConnected connectionHandler = null, onDisconnected disconnectedHandler = null)
         {
             m_ConnectedHandler = connectionHandler;
             m_DisconnectedHandler = disconnectedHandler;
 
-            m_StreamWriter = new NetStreamWriter(this, 4 * 1024);
-            m_StreamReader = new NetStreamReader(this, 8 * 1024);
+            m_StreamWriter = new NetStreamWriter(this, sendBufferSize);
+            m_StreamReader = new NetStreamReader(this, receiveBufferSize);
 
             m_Host = host;
             m_Port = port;

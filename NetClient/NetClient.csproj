@@ -48,16 +48,10 @@
     <Compile Include="Log\DiagnosticListener.cs" />
     <Compile Include="Log\ITraceListener.cs" />
     <Compile Include="Log\Trace.cs" />
-    <Compile Include="Message\Msg.cs" />
-    <Compile Include="Message\Msg2.cs" />
     <Compile Include="NetClient.cs" />
     <Compile Include="NetStream.cs" />
     <Compile Include="NetStreamReader.cs" />
     <Compile Include="NetStreamWriter.cs" />
-    <Compile Include="Packet\IPacket.cs" />
-    <Compile Include="Packet\PacketProtobuf.cs" />
-    <Compile Include="Packet\PacketString.cs" />
-    <Compile Include="NetManager.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="NetRingBuffer.cs" />
     <Compile Include="Utils\ConsistentHashContainer.cs" />

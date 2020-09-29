@@ -1,7 +1,7 @@
 ﻿using System.IO;
 using System.Text;
 
-namespace Framework.NetWork
+namespace NetWorkApplication
 {
     public class PacketString : IPacket<string>
     {

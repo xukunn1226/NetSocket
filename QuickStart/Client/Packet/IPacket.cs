@@ -4,8 +4,9 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Framework.NetWork;
 
-namespace Framework.NetWork
+namespace NetWorkApplication
 {
     public interface IPacket<T> where T : class
     {
