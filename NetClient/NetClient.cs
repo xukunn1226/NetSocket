@@ -14,13 +14,6 @@ namespace Framework.NetWork
         Connected,
     }
 
-    /// <summary>
-    /// 测试用例：
-    /// 1、服务器连接不上
-    /// 2、连接中突然被断开
-    /// 3、被动断线导致重连
-    /// 4、主动断开连接
-    /// </summary>
     public class NetClient
     {
         public delegate void onConnected(int ret);

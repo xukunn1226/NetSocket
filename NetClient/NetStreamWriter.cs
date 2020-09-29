@@ -7,19 +7,6 @@ using System.IO;
 
 namespace Framework.NetWork
 {
-    /// <summary>
-    /// 负责网络数据发送，主线程同步接收数据，子线程异步发送数据
-    /// 测试用例：
-    /// 1、连接服务器失败       [PASS]
-    /// 6、主动断开连接         [PASS]
-    /// 2、关闭服务器，再发送消息   [PASS]
-    /// 3、客户端异常断开连接（参数错误、断电等）
-    /// 4、断线重连
-    /// 5、任何异常情况能否退出WriteAsync    
-    /// 7、持续的发送协议时重复1-6
-    /// 8、测试RequestBufferToWrite
-    /// 9、同时开启wifi，4G时，先断开wifi，再断开4G，然后再逐一连接
-    /// </summary>
     sealed internal class NetStreamWriter : NetStream
     {
         private NetClient                   m_NetClient;
