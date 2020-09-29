@@ -9,6 +9,7 @@ using System.Threading;
 using System.IO;
 using Framework.NetWork.Log;
 using Google.Protobuf;
+using Google.Protobuf.Collections;
 using NetProtocol;
 
 namespace Client
@@ -75,7 +76,10 @@ namespace Client
                 msg.Name = "1233";
                 msg.Num = 3;
                 msg.Result = 4;
-                //msg.MyList = 
+                if(index % 2 == 0)
+                    msg.MyList.Add("22222222222");
+                if (index % 3 == 0)
+                    msg.MyList.Add("33333333333333");
                 m_NetManager.SendData(msg);
                 if (index % 3 == 0)
                     m_NetManager.Tick();

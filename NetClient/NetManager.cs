@@ -89,9 +89,6 @@ namespace Framework.NetWork
             m_MessageList.Clear();
             while (true)
             {
-                startOffset += totalRealLength;
-                totalLength -= totalRealLength;
-
                 int realLength;                 // 单次解析的长度(byte)
                 TMessage msg;
                 bool success = m_Parser.Deserialize(in data, startOffset, totalLength, out realLength, out msg);
@@ -99,7 +96,10 @@ namespace Framework.NetWork
                     m_MessageList.Add(msg);
 
                 totalRealLength += realLength;
-                if (!success || totalRealLength == totalLength)
+                startOffset += realLength;
+                totalLength -= realLength;
+
+                if (!success || totalRealLength == length)
                     break;                      // 解析失败或者已接收的消息长度解析完了
             }
             m_NetClient.FinishRead(totalRealLength);
