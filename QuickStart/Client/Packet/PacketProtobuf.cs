@@ -2,7 +2,6 @@
 using Framework.NetWork.Log;
 using Google.Protobuf;
 using NetProtocol;
-using Framework.NetWork;
 
 namespace NetWorkApplication
 {
