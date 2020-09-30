@@ -5,6 +5,8 @@ using System.Threading;
 using Google.Protobuf;
 using NetProtocol;
 using NetWorkApplication;
+using System.Net;
+using Framework.NetWork.Utils;
 
 namespace Client
 {
@@ -24,7 +26,7 @@ namespace Client
             {
                 if (key.Key == ConsoleKey.F1)
                 {
-                    await m_NetManager.Connect("127.0.0.1", 11000);
+                    await m_NetManager.Connect("192.168.48.15", 11000);
 
                     if (m_NetManager.state == ConnectState.Connected)
                         Console.WriteLine("Connect server...");
@@ -78,12 +80,12 @@ namespace Client
                 if (index % 3 == 0)
                     m_NetManager.Tick();
 
-                if (index == 300)
-                {
-                    m_NetManager.Close();
-                    m_NetManager.Tick();
-                    break;
-                }
+                //if (index == 300)
+                //{
+                //    m_NetManager.Close();
+                //    m_NetManager.Tick();
+                //    break;
+                //}
 
                 await Task.Delay(10);
             }

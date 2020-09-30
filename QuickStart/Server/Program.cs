@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
+using Framework.NetWork.Utils;
 
 // State object for reading client data asynchronously  
 public class StateObject
@@ -37,7 +38,7 @@ public class AsynchronousSocketListener
         string hostName = Dns.GetHostName();
         IPHostEntry ipHostInfo = Dns.GetHostEntry(hostName);
         //IPAddress ipAddress = ipHostInfo.AddressList[0];
-        IPAddress ipAddress = IPAddress.Parse("127.0.0.1");
+        IPAddress ipAddress = IPAddress.Parse(IPUtility.GetLocalIntranetIP().ToString());
         IPEndPoint localEndPoint = new IPEndPoint(ipAddress, 11000);
 
         // Create a TCP/IP socket.  
