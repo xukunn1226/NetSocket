@@ -37,7 +37,7 @@ public class AsynchronousSocketListener
         string hostName = Dns.GetHostName();
         IPHostEntry ipHostInfo = Dns.GetHostEntry(hostName);
         //IPAddress ipAddress = ipHostInfo.AddressList[0];
-        IPAddress ipAddress = IPAddress.Parse("127.0.0.1");
+        IPAddress ipAddress = IPAddress.Parse("192.168.5.166");      // 192.168.5.166
         IPEndPoint localEndPoint = new IPEndPoint(ipAddress, 11000);
 
         // Create a TCP/IP socket.  
