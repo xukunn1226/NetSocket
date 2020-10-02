@@ -26,7 +26,7 @@ namespace Client
             {
                 if (key.Key == ConsoleKey.F1)
                 {
-                    await m_NetManager.Connect("192.168.48.15", 11000);
+                    await m_NetManager.Connect("192.168.1.6", 11000);
 
                     if (m_NetManager.state == ConnectState.Connected)
                         Console.WriteLine("Connect server...");
@@ -77,7 +77,7 @@ namespace Client
                 if (index % 3 == 0)
                     msg.MyList.Add("33333333333333");
                 m_NetManager.SendData(msg);
-                if (index % 3 == 0)
+                //if (index % 3 == 0)
                     m_NetManager.Tick();
 
                 //if (index == 300)
